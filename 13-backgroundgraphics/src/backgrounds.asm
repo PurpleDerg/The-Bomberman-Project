@@ -40,7 +40,7 @@ load_sprites:
   LDA sprites,X
   STA $0200,X
   INX
-  CPX #$10
+  CPX #$60
   BNE load_sprites
 
 	; write nametables
@@ -195,16 +195,41 @@ palettes:
 .byte $0f, $0c, $07, $13
 .byte $0f, $19, $09, $29
 
-.byte $0f, $2d, $10, $15
+.byte $0f, $20, $27, $12
 .byte $0f, $19, $09, $29
 .byte $0f, $19, $09, $29
 .byte $0f, $19, $09, $29
 
 sprites:
-.byte $70, $05, $00, $80
-.byte $70, $06, $00, $88
-.byte $78, $07, $00, $80
-.byte $78, $08, $00, $88
+.byte $00, $00, $00, $00 ; y,tile,pallete,x
+.byte $00, $01, $00, $08
+.byte $08, $10, $00, $00
+.byte $08, $11, $00, $08
+
+.byte $00, $02, $00, $10 
+.byte $00, $03, $00, $18
+.byte $08, $12, $00, $10
+.byte $08, $13, $00, $18
+
+.byte $00, $04, $00, $20 
+.byte $00, $05, $00, $28
+.byte $08, $14, $00, $20
+.byte $08, $15, $00, $28
+
+.byte $00, $06, $00, $30 
+.byte $00, $07, $00, $38
+.byte $08, $16, $00, $30
+.byte $08, $17, $00, $38
+
+.byte $10, $08, $00, $40 
+.byte $10, $09, $00, $48
+.byte $18, $18, $00, $40
+.byte $18, $19, $00, $48
+
+.byte $10, $0a, $00, $50 
+.byte $10, $0b, $00, $58
+.byte $18, $1a, $00, $50
+.byte $18, $1b, $00, $58
 
 .segment "CHR"
-.incbin "starfield.chr"
+.incbin "starfield1.chr"
