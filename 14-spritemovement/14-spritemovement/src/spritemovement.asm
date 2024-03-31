@@ -6,6 +6,7 @@ player_x: .res 1
 player_y: .res 1
 player_dir: .res 1
 frame_data: .res 1 
+frame_buffer: .res 1
 .exportzp player_x, player_y, frame_data
 
 .segment "CODE"
@@ -22,8 +23,11 @@ frame_data: .res 1
 
   ; update tiles *after* DMA transfer
 	JSR update_player
+  JSR update_frame
   JSR draw_player
-  JSR animation
+  
+  
+  
   
 
 	STA $2005
@@ -199,40 +203,32 @@ forever:
   TYA
   PHA
 
-
-
-  
-
-
-
-; ; ;   LDA player_x
-; ; ;   CMP #$e0
-; ; ;   BCC not_at_right_edge
-; ; ;   ; if BCC is not taken, we are greater than $e0
-; ; ;   LDA #$00
-; ; ;   STA player_dir    ; start moving left
-; ; ;   JMP direction_set ; we already chose a direction,
-; ; ;                     ; so we can skip the left side check
-; ; ; not_at_right_edge:
-; ; ;   LDA player_x
-; ; ;   CMP #$10
-; ; ;   BCS direction_set
-; ; ;   ; if BCS not taken, we are less than $10
-; ; ;   LDA #$01
-; ; ;   STA player_dir   ; start moving right
-; ; ; direction_set:
-; ; ;   ; now, actually update player_x
-; ; ;   LDA player_dir
-; ; ;   CMP #$01
-; ; ;   BEQ move_right
-; ; ;   ; if player_dir minus $01 is not zero,
-; ; ;   ; that means player_dir was $00 and
-; ; ;   ; we need to move left
-; ; ;   DEC player_x
-; ;   JMP exit_subroutine
-; ; move_right:
-; ;   INC player_x
-; exit_subroutine:
+;    LDA player_x
+;    CMP #$e0
+;    BCC not_at_right_edge
+;    ; if BCC is not taken, we are greater than $e0
+;    LDA #$00
+;    STA player_dir    ; start moving left
+;    JMP direction_set ; we already chose a direction, so we can skip the left side check
+;  not_at_right_edge:
+;    LDA player_x
+;    CMP #$10
+;    BCS direction_set   ; if BCS not taken, we are less than $10
+;    LDA #$01
+;    STA player_dir   ; start moving right
+;  direction_set:
+;    ; now, actually update player_x
+;    LDA player_dir
+;    CMP #$01
+;    BEQ move_right
+;    ; if player_dir minus $01 is not zero,
+;    ; that means player_dir was $00 and
+;    ; we need to move left
+;    DEC player_x
+;    JMP exit_subroutine
+;  move_right:
+;    INC player_x
+;  exit_subroutine:
   ; all done, clean up and return
   PLA
   TAY
@@ -253,15 +249,51 @@ forever:
   PHA
 
   ; write player tile numbers
-  ; start_anim: 
-  LDA #$00
+  start_anim: 
+  LDA frame_data ;frame data 
   STA $0201
-  LDA #$01
+  LDA frame_data ;frame data +1
+  CLC
+  ADC #$01
   STA $0205
-  LDA #$10
+  LDA frame_data ;frame data +$10
+  CLC
+  ADC #$10
   STA $0209
-  LDA #$11
+  LDA frame_data ;frame data +$11
+  CLC
+  ADC #$11
   STA $020d
+
+  ; LDX #$00
+  
+  ; next_sprite:
+  ;   ;Update to 2 sprite in sheet
+  ;   LDA $0201,  ;top left tile 
+  ;   CLC
+  ;   ADC #$02 
+  ;   STA $0201
+
+  ;   LDA $0205 ;top right tile
+  ;   CLC
+  ;   ADC #$02
+  ;   STA $0205
+
+  ;   LDA $0209 ;bot left tile
+  ;   CLC
+  ;   ADC #$02
+  ;   STA $0209
+
+  ;   LDA $020d ;bot right tile
+  ;   CLC
+  ;   ADC #$02
+  ;   STA $020d
+  ;   INX 
+  ;   CPX #$04
+  ;   BNE next_sprite
+  ;   BEQ start_anim
+
+
 
   ; LDA frame_data
   ; CMP #$55
@@ -326,7 +358,7 @@ forever:
   STA $020f
 
   
-  JSR animation
+  ; JSR animation
   
 
 
@@ -340,7 +372,7 @@ forever:
   RTS
 .endproc
 
-.proc animation
+.proc update_frame
 ; save registers
   PHP
   PHA
@@ -348,55 +380,42 @@ forever:
   PHA
   TYA
   PHA
-  
-  
-  INC frame_data
-  LDX #$00
-  ;Update to 2 sprite in sheet
-  anim:
-    LDA $0201 ;top left tile 
-    CLC
-    ADC #$02 
-    STA $0201
 
-    LDA $0205 ;top right tile
-    CLC
-    ADC #$02
-    STA $0205
+  INC frame_buffer
 
-    LDA $0209 ;bot left tile
-    CLC
-    ADC #$02
-    STA $0209
+  LDA frame_buffer
+  CMP #$1e ;nmi is called 60fps
+  BEQ next_frame
+  JMP exit
 
-    LDA $020d ;bot right tile
-    CLC
-    ADC #$02
-    STA $020d
-
-    LDA frame_data
-    CMP #$FA
-    BCS increase_X
-
-    increase_X:
-      INX
-      CPX #$03
-      BNE anim
+  next_frame:
+  ;increase frame data by 2 
+    INC frame_data
+    INC frame_data
 
 
-  
+    ;reset frame_buffer
+    LDA frame_data ;current frame
+    CMP #$04
+    BEQ reset_frame
+    LDA #$00
+    STA frame_buffer
+    JMP exit
+  reset_frame:
+    LDA #$00
+    STA frame_data
+    
 
-  
-
-  ; restore registers and return
-  PLA
-  TAY
-  PLA
-  TAX
-  PLA
-  PLP
-  RTS
-.endproc
+    ; restore registers and return
+  exit:
+    PLA
+    TAY
+    PLA
+    TAX
+    PLA
+    PLP
+    RTS
+.endproc 
 
 .segment "VECTORS"
 .addr nmi_handler, reset_handler, irq_handler
