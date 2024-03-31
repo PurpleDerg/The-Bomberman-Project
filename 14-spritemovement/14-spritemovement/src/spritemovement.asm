@@ -22,9 +22,10 @@ frame_buffer: .res 1
 	LDA #$00
 
   ; update tiles *after* DMA transfer
-	JSR update_player
+	
   JSR update_frame
-  JSR draw_player
+  JSR update_player
+  JSR draw_player_left
   
   
   
@@ -229,7 +230,7 @@ forever:
 ;  move_right:
 ;    INC player_x
 ;  exit_subroutine:
-  ; all done, clean up and return
+;   ;all done, clean up and return
   PLA
   TAY
   PLA
@@ -239,7 +240,7 @@ forever:
   RTS
 .endproc
 
-.proc draw_player
+.proc draw_player_left
   ; save registers
   PHP
   PHA
@@ -265,56 +266,7 @@ forever:
   ADC #$11
   STA $020d
 
-  ; LDX #$00
   
-  ; next_sprite:
-  ;   ;Update to 2 sprite in sheet
-  ;   LDA $0201,  ;top left tile 
-  ;   CLC
-  ;   ADC #$02 
-  ;   STA $0201
-
-  ;   LDA $0205 ;top right tile
-  ;   CLC
-  ;   ADC #$02
-  ;   STA $0205
-
-  ;   LDA $0209 ;bot left tile
-  ;   CLC
-  ;   ADC #$02
-  ;   STA $0209
-
-  ;   LDA $020d ;bot right tile
-  ;   CLC
-  ;   ADC #$02
-  ;   STA $020d
-  ;   INX 
-  ;   CPX #$04
-  ;   BNE next_sprite
-  ;   BEQ start_anim
-
-
-
-  ; LDA frame_data
-  ; CMP #$55
-  ; BCS anim
-
-  ; anim:
-  
-
-  
-
-
-  ; LDA frame_data
-  ; CMP #$AA 
-  ; BCS anim
-  
-  ; LDA frame_data
-  ; CMP #$FF
-  ; BCS reset_anim
-
-
-
 
   ; write player ship tile attributes
   ; use palette 0
@@ -384,7 +336,7 @@ forever:
   INC frame_buffer
 
   LDA frame_buffer
-  CMP #$1e ;nmi is called 60fps
+  CMP #$0f ;nmi is called 60fps
   BEQ next_frame
   JMP exit
 
@@ -396,7 +348,7 @@ forever:
 
     ;reset frame_buffer
     LDA frame_data ;current frame
-    CMP #$04
+    CMP #$06  ;THIS IS HARDCODED IN. This represents the tile at which it needs to stop
     BEQ reset_frame
     LDA #$00
     STA frame_buffer
@@ -404,6 +356,7 @@ forever:
   reset_frame:
     LDA #$00
     STA frame_data
+    STA frame_buffer
     
 
     ; restore registers and return
