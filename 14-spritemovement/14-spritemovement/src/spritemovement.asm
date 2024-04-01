@@ -26,6 +26,10 @@ frame_buffer: .res 1
   JSR update_frame
   JSR update_player
   JSR draw_player_left
+  JSR draw_player_down
+  JSR draw_player_up
+  JSR draw_player_right
+  
   
   
   
@@ -323,6 +327,272 @@ forever:
   PLP
   RTS
 .endproc
+
+.proc draw_player_down
+  ; save registers
+  PHP
+  PHA
+  TXA
+  PHA
+  TYA
+  PHA
+
+  ; write player tile numbers
+  start_anim: 
+  LDA frame_data ;frame data +6
+  CLC
+  ADC #$06
+  STA $0211
+  LDA frame_data ;frame data + 1
+  CLC
+  ADC #$07
+  STA $0215
+  LDA frame_data ;frame data +$10
+  CLC
+  ADC #$16
+  STA $0219
+  LDA frame_data ;frame data +$11
+  CLC
+  ADC #$17
+  STA $021d
+
+  ; write player ship tile attributes
+  ; use palette 0
+  LDA #$00
+  STA $0212
+  STA $0216
+  STA $021a
+  STA $021e
+
+  ; store tile locations
+  ; top left tile:
+  LDA player_y
+  CLC
+  ADC #$10
+  STA $0210
+  LDA player_x
+  STA $0213
+
+  ; top right tile (x + 8):
+  LDA player_y
+  CLC
+  ADC #$10
+  STA $0214
+  LDA player_x
+  CLC
+  ADC #$08
+  STA $0217
+
+  ; bottom left tile (y + 8):
+  LDA player_y
+  CLC
+  ADC #$18 ; sum 16 bits to the already 8 bit offset
+  STA $0218
+  LDA player_x
+  STA $021b
+
+  ; bottom right tile (x + 8, y + 8)
+  LDA player_y
+  CLC
+  ADC #$18
+  STA $021c
+  LDA player_x
+  CLC
+  ADC #$08
+  STA $021f
+
+  
+  ; JSR animation
+  
+
+
+  ; restore registers and return
+  PLA
+  TAY
+  PLA
+  TAX
+  PLA
+  PLP
+  RTS
+.endproc
+
+.proc draw_player_up
+  ; save registers
+  PHP
+  PHA
+  TXA
+  PHA
+  TYA
+  PHA
+
+  ; write player tile numbers
+  start_anim: 
+  LDA frame_data ;frame data +6
+  CLC
+  ADC #$26
+  STA $0221
+  LDA frame_data ;frame data + 1
+  CLC
+  ADC #$27
+  STA $0225
+  LDA frame_data ;frame data +$10
+  CLC
+  ADC #$36
+  STA $0229
+  LDA frame_data ;frame data +$11
+  CLC
+  ADC #$37
+  STA $022d
+
+  ; write player ship tile attributes
+  ; use palette 0
+  LDA #$00
+  STA $0222
+  STA $0226
+  STA $022a
+  STA $022e
+
+  ; store tile locations
+  ; top left tile:
+  LDA player_y
+  CLC
+  SBC #$10 ;instead of adding 16 bit offset we substract
+  STA $0220
+  LDA player_x
+  STA $0223
+
+  ; top right tile (x + 8):
+  LDA player_y
+  CLC
+  SBC #$10
+  STA $0224
+  LDA player_x
+  CLC
+  ADC #$08
+  STA $0227
+
+  ; bottom left tile (y + 8):
+  LDA player_y
+  CLC
+  SBC #$08 ; substract 8 bit offset
+  STA $0228
+  LDA player_x
+  STA $022b
+
+  ; bottom right tile (x + 8, y + 8)
+  LDA player_y
+  CLC
+  SBC #$08
+  STA $022c
+  LDA player_x
+  CLC
+  ADC #$08
+  STA $022f
+
+  
+  ; JSR animation
+  
+
+
+  ; restore registers and return
+  PLA
+  TAY
+  PLA
+  TAX
+  PLA
+  PLP
+  RTS
+.endproc
+
+.proc draw_player_right
+  ; save registers
+  PHP
+  PHA
+  TXA
+  PHA
+  TYA
+  PHA
+
+  ; write player tile numbers
+  start_anim: 
+  LDA frame_data ;frame data +6
+  CLC
+  ADC #$20
+  STA $0231 ;Update to next DMA address
+  LDA frame_data ;frame data + 1
+  CLC
+  ADC #$21
+  STA $0235
+  LDA frame_data ;frame data +$10
+  CLC
+  ADC #$30
+  STA $0239
+  LDA frame_data ;frame data +$11
+  CLC
+  ADC #$31
+  STA $023d
+
+  ; write player ship tile attributes
+  ; use palette 0
+  LDA #$00
+  STA $0232
+  STA $0236
+  STA $023a
+  STA $023e
+
+  ; store tile locations
+  ; top left tile:
+  LDA player_y
+  STA $0230
+  LDA player_x
+  CLC 
+  ADC #$10 ;offset 16 bits to the right
+  STA $0233
+
+  ; top right tile (x + 8):
+  LDA player_y
+  STA $0234
+  LDA player_x
+  CLC
+  ADC #$18
+  STA $0237
+
+  ; bottom left tile (y + 8):
+  LDA player_y
+  CLC
+  ADC #$08 
+  STA $0238
+  LDA player_x
+  CLC 
+  ADC #$10
+  STA $023b
+
+  ; bottom right tile (x + 8, y + 8)
+  LDA player_y
+  CLC
+  ADC #$08
+  STA $023c
+  LDA player_x
+  CLC
+  ADC #$18
+  STA $023f
+
+  
+  ; JSR animation
+  
+
+
+  ; restore registers and return
+  PLA
+  TAY
+  PLA
+  TAX
+  PLA
+  PLP
+  RTS
+.endproc
+
+ 
 
 .proc update_frame
 ; save registers
