@@ -26,17 +26,8 @@ buttons1: .res 1
 	
   JSR update_frame
   JSR update_player
-  JSR draw_player_left
-  JSR draw_player_down
-  JSR draw_player_up
-  JSR draw_player_right
-  
-  
   jsr ReadController
   jsr input_move
-  
-  
-  
 
 	STA $2005
 	STA $2005
@@ -657,12 +648,12 @@ forever:
   STA $4016
   LDA #$00
   STA $4016
-  LDX #$08
-ReadControllerLoop:
-  LDA $4016
-  LSR A            ; bit0 -> Carry
-  ROL buttons1     ; bit0 <- Carry
-  DEX
+  LDX #$08         ; x=8
+ReadControllerLoop: ; loop to store contoller input in button
+  LDA $4016        ; controller data in
+  LSR A            ; moves bit 0 into carry
+  ROL buttons1     ; puts data in button variable with shift
+  DEX              ; x--
   BNE ReadControllerLoop
   
 
@@ -687,11 +678,11 @@ ReadControllerLoop:
   PHA
 
   ReadUp: 
-  LDA buttons1       
-  AND #%00001000  
-  BEQ ReadUpDone   ; branch to ReadupDone if button is NOT pressed (0)
-  DEC player_y
-  JSR draw_player_left                     
+  LDA buttons1      ; load button
+  AND #%00001000  ; use bit mask to read input
+  BEQ ReadUpDone   ; branch to ReadupDone if button is NOT pressed 
+  DEC player_y     ; change player position
+  JSR draw_player_up   ;render player animation                  
   ReadUpDone:
 
   ReadDown: 
@@ -699,7 +690,7 @@ ReadControllerLoop:
   AND #%00000100 
   BEQ ReadDownDone   ; branch to ReadDownDone if button is NOT pressed (0)
   INC player_y
-  JSR draw_player_left                         
+  JSR draw_player_down                         
   ReadDownDone:
 
   ReadLeft: 
@@ -715,7 +706,7 @@ ReadControllerLoop:
   AND #%00000001 
   BEQ ReadRightDone   ; branch to ReadRightDone if button is NOT pressed (0)
   INC player_x
-  JSR draw_player_left                        
+  JSR draw_player_right                        
   ReadRightDone:
 
     ; restore registers and return
