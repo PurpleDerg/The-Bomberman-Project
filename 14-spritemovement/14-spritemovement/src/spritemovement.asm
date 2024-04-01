@@ -7,6 +7,7 @@ player_y: .res 1
 player_dir: .res 1
 frame_data: .res 1 
 frame_buffer: .res 1
+buttons1: .res 1
 .exportzp player_x, player_y, frame_data
 
 .segment "CODE"
@@ -25,8 +26,9 @@ frame_buffer: .res 1
 	
   JSR update_frame
   JSR update_player
-  JSR draw_player_left
   
+  jsr ReadController
+  jsr input_move
   
   
   
@@ -358,6 +360,92 @@ forever:
     STA frame_data
     STA frame_buffer
     
+
+    ; restore registers and return
+  exit:
+    PLA
+    TAY
+    PLA
+    TAX
+    PLA
+    PLP
+    RTS
+.endproc 
+
+.proc ReadController
+; save registers
+  PHP
+  PHA
+  TXA
+  PHA
+  TYA
+  PHA
+
+
+  LDA #$01
+  STA $4016
+  LDA #$00
+  STA $4016
+  LDX #$08
+ReadControllerLoop:
+  LDA $4016
+  LSR A            ; bit0 -> Carry
+  ROL buttons1     ; bit0 <- Carry
+  DEX
+  BNE ReadControllerLoop
+  
+
+    ; restore registers and return
+  exit:
+    PLA
+    TAY
+    PLA
+    TAX
+    PLA
+    PLP
+    RTS
+.endproc 
+
+.proc input_move
+; save registers
+  PHP
+  PHA
+  TXA
+  PHA
+  TYA
+  PHA
+
+  ReadUp: 
+  LDA buttons1       
+  AND #%00001000  
+  BEQ ReadUpDone   ; branch to ReadupDone if button is NOT pressed (0)
+  DEC player_y
+  JSR draw_player_left                     
+  ReadUpDone:
+
+  ReadDown: 
+  LDA buttons1       
+  AND #%00000100 
+  BEQ ReadDownDone   ; branch to ReadDownDone if button is NOT pressed (0)
+  INC player_y
+  JSR draw_player_left                         
+  ReadDownDone:
+
+  ReadLeft: 
+  LDA buttons1       
+  AND #%00000010 
+  BEQ ReadLeftDone   ; branch to ReadLeftDone if button is NOT pressed (0)
+  DEC player_x
+  JSR draw_player_left                        
+  ReadLeftDone:
+
+  ReadRight: 
+  LDA buttons1       
+  AND #%00000001 
+  BEQ ReadRightDone   ; branch to ReadRightDone if button is NOT pressed (0)
+  INC player_x
+  JSR draw_player_left                        
+  ReadRightDone:
 
     ; restore registers and return
   exit:
