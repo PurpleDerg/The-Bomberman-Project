@@ -337,7 +337,7 @@ forever:
 
   ; write player tile numbers
   start_anim: 
-  LDA frame_data ;frame data 
+  LDA frame_data ;frame data holds the current base address of the tile 
   STA $0201
   LDA frame_data ;frame data +1
   CLC
@@ -945,7 +945,7 @@ forever:
   INC frame_buffer
 
   LDA frame_buffer
-  CMP #$10 ;nmi is called 60fps
+  CMP #$06 ;nmi is called 60fps
   BEQ next_frame
   JMP exit
 
@@ -990,16 +990,16 @@ forever:
 
 
   LDA #$01
-  STA $4016
+  STA $4016 ; set to data collection mode 
   LDA #$00
-  STA $4016
-  LDX #$08
+  STA $4016 ; set to read data mode
+  LDX #$08 ; Loop 8 times
 ReadControllerLoop:
   LDA $4016
   LSR A            ; bit0 -> Carry
   ROL buttons1     ; bit0 <- Carry
-  DEX
-  BNE ReadControllerLoop
+  DEX              ; If the result is 0, the Z flag is cleared 
+  BNE ReadControllerLoop ;Branch if X reaches 0
   
 
     ; restore registers and return
@@ -1024,7 +1024,7 @@ ReadControllerLoop:
 
   ReadUp: 
   LDA buttons1       
-  AND #%00001000  
+  AND #%00001000   ; And raises Z = 1 if they're not equal to the word in buttons1. 
   BEQ ReadUpDone   ; branch to ReadupDone if button is NOT pressed (0)
   DEC player_y
   JSR draw_player_up                     
@@ -1075,7 +1075,7 @@ palettes:
 .byte $0f, $0c, $07, $13
 .byte $0f, $19, $09, $29
 
-.byte $0f, $2d, $10, $15
+.byte $0f, $20, $27, $12
 .byte $0f, $19, $09, $29
 .byte $0f, $19, $09, $29
 .byte $0f, $19, $09, $29
