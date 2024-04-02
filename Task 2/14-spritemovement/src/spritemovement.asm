@@ -7,7 +7,6 @@ player_y: .res 1
 player_dir: .res 1
 frame_data: .res 1 
 frame_buffer: .res 1
-buttons1: .res 1
 .exportzp player_x, player_y, frame_data
 
 .segment "CODE"
@@ -26,15 +25,12 @@ buttons1: .res 1
 	
   JSR update_frame
   JSR update_player
-  JSR draw_player
-  ; JSR draw_player_left
-  ; JSR draw_player_down
-  ; JSR draw_player_up
-  ; JSR draw_player_right
+  JSR draw_player_left
+  JSR draw_player_down
+  JSR draw_player_up
+  JSR draw_player_right
   
   
-  jsr ReadController
-  jsr input_move
   
   
   
@@ -248,84 +244,6 @@ forever:
   RTS
 .endproc
 
-;animations 
-.proc draw_player
-  ; save registers
-  PHP
-  PHA
-  TXA
-  PHA
-  TYA
-  PHA
-
-  ; write player tile numbers
-  start_anim: 
-  LDA #$08 ;frame data 
-  STA $0201
-  LDA #$09 ;frame data +1
-  STA $0205
-  LDA #$18 ;frame data +$10
-  STA $0209
-  LDA #$19 ;frame data +$11
-  STA $020d
-
-  
-
-  ; write player ship tile attributes
-  ; use palette 0
-  LDA #$00
-  STA $0202
-  STA $0206
-  STA $020a
-  STA $020e
-
-  ; store tile locations
-  ; top left tile:
-  LDA player_y
-  STA $0200
-  LDA player_x
-  STA $0203
-
-  ; top right tile (x + 8):
-  LDA player_y
-  STA $0204
-  LDA player_x
-  CLC
-  ADC #$08
-  STA $0207
-
-  ; bottom left tile (y + 8):
-  LDA player_y
-  CLC
-  ADC #$08
-  STA $0208
-  LDA player_x
-  STA $020b
-
-  ; bottom right tile (x + 8, y + 8)
-  LDA player_y
-  CLC
-  ADC #$08
-  STA $020c
-  LDA player_x
-  CLC
-  ADC #$08
-  STA $020f
-
-  
-  ; JSR animation
-  
-
-
-  ; restore registers and return
-  PLA
-  TAY
-  PLA
-  TAX
-  PLA
-  PLP
-  RTS
-.endproc
 .proc draw_player_left
   ; save registers
   PHP
@@ -337,17 +255,17 @@ forever:
 
   ; write player tile numbers
   start_anim: 
-  LDA frame_data ;frame data holds the current base address of the tile 
+  LDA frame_data ;frame data TOP LEFT
   STA $0201
-  LDA frame_data ;frame data +1
+  LDA frame_data ;frame data +1 TOP RIGHT
   CLC
   ADC #$01
   STA $0205
-  LDA frame_data ;frame data +$10
+  LDA frame_data ;frame data +$10 BOT LEFT
   CLC
   ADC #$10
   STA $0209
-  LDA frame_data ;frame data +$11
+  LDA frame_data ;frame data +$11 BOT RIGHT
   CLC
   ADC #$11
   STA $020d
@@ -421,65 +339,67 @@ forever:
 
   ; write player tile numbers
   start_anim: 
-  LDA frame_data ;frame data 
-  CLC 
+  LDA frame_data ;frame data +6
+  CLC
   ADC #$06
-  STA $0201
-  LDA frame_data ;frame data +1
+  STA $0211
+  LDA frame_data ;frame data + 1
   CLC
   ADC #$07
-  STA $0205
+  STA $0215
   LDA frame_data ;frame data +$10
   CLC
   ADC #$16
-  STA $0209
+  STA $0219
   LDA frame_data ;frame data +$11
   CLC
   ADC #$17
-  STA $020d
-
-  
+  STA $021d
 
   ; write player ship tile attributes
   ; use palette 0
   LDA #$00
-  STA $0202
-  STA $0206
-  STA $020a
-  STA $020e
+  STA $0212
+  STA $0216
+  STA $021a
+  STA $021e
 
   ; store tile locations
   ; top left tile:
   LDA player_y
-  STA $0200
+  CLC
+  ADC #$10
+  STA $0210
   LDA player_x
-  STA $0203
+  STA $0213
 
   ; top right tile (x + 8):
   LDA player_y
-  STA $0204
+  CLC
+  ADC #$10
+  STA $0214
   LDA player_x
   CLC
   ADC #$08
-  STA $0207
+  STA $0217
 
   ; bottom left tile (y + 8):
   LDA player_y
   CLC
-  ADC #$08
-  STA $0208
+  ADC #$18 ; sum 16 bits to the already 8 bit offset
+  STA $0218
   LDA player_x
-  STA $020b
+  STA $021b
 
   ; bottom right tile (x + 8, y + 8)
   LDA player_y
   CLC
-  ADC #$08
-  STA $020c
+  ADC #$18
+  STA $021c
   LDA player_x
   CLC
   ADC #$08
-  STA $020f
+  STA $021f
 
   
   ; JSR animation
@@ -495,94 +415,6 @@ forever:
   PLP
   RTS
 .endproc
-
-; .proc draw_player_down_old
-;   ; save registers
-;   PHP
-;   PHA
-;   TXA
-;   PHA
-;   TYA
-;   PHA
-
-;   ; write player tile numbers
-;   start_anim: 
-;   LDA frame_data ;frame data +6
-;   CLC
-;   ADC #$06
-;   STA $0201
-;   LDA frame_data ;frame data + 1
-;   CLC
-;   ADC #$07
-;   STA $0205
-;   LDA frame_data ;frame data +$10
-;   CLC
-;   ADC #$16
-;   STA $0209
-;   LDA frame_data ;frame data +$11
-;   CLC
-;   ADC #$17
-;   STA $020d
-
-;   ; write player ship tile attributes
-;   ; use palette 0
-;   LDA #$00
-;   STA $0202
-;   STA $0206
-;   STA $020a
-;   STA $02e
-
-;   ; store tile locations
-;   ; top left tile:
-;   LDA player_y
-;   CLC
-;   ADC #$10
-;   STA $0210
-;   LDA player_x
-;   STA $0213
-
-;   ; top right tile (x + 8):
-;   LDA player_y
-;   CLC
-;   ADC #$10
-;   STA $0214
-;   LDA player_x
-;   CLC
-;   ADC #$08
-;   STA $0217
-
-;   ; bottom left tile (y + 8):
-;   LDA player_y
-;   CLC
-;   ADC #$18 ; sum 16 bits to the already 8 bit offset
-;   STA $0218
-;   LDA player_x
-;   STA $021b
-
-;   ; bottom right tile (x + 8, y + 8)
-;   LDA player_y
-;   CLC
-;   ADC #$18
-;   STA $021c
-;   LDA player_x
-;   CLC
-;   ADC #$08
-;   STA $021f
-
-  
-;   ; JSR animation
-  
-
-
-;   ; restore registers and return
-;   PLA
-;   TAY
-;   PLA
-;   TAX
-;   PLA
-;   PLP
-;   RTS
-; .endproc
 
 .proc draw_player_up
   ; save registers
@@ -595,65 +427,67 @@ forever:
 
   ; write player tile numbers
   start_anim: 
-  LDA frame_data ;frame data 
+  LDA frame_data ;frame data +6
   CLC
   ADC #$26
-  STA $0201
-  LDA frame_data ;frame data +1
+  STA $0221
+  LDA frame_data ;frame data + 1
   CLC
   ADC #$27
-  STA $0205
+  STA $0225
   LDA frame_data ;frame data +$10
   CLC
   ADC #$36
-  STA $0209
+  STA $0229
   LDA frame_data ;frame data +$11
   CLC
   ADC #$37
-  STA $020d
-
-  
+  STA $022d
 
   ; write player ship tile attributes
   ; use palette 0
   LDA #$00
-  STA $0202
-  STA $0206
-  STA $020a
-  STA $020e
+  STA $0222
+  STA $0226
+  STA $022a
+  STA $022e
 
   ; store tile locations
   ; top left tile:
   LDA player_y
-  STA $0200
+  CLC
+  SBC #$10 ;instead of adding 16 bit offset we substract
+  STA $0220
   LDA player_x
-  STA $0203
+  STA $0223
 
   ; top right tile (x + 8):
   LDA player_y
-  STA $0204
+  CLC
+  SBC #$10
+  STA $0224
   LDA player_x
   CLC
   ADC #$08
-  STA $0207
+  STA $0227
 
   ; bottom left tile (y + 8):
   LDA player_y
   CLC
-  ADC #$08
-  STA $0208
+  SBC #$08 ; substract 8 bit offset
+  STA $0228
   LDA player_x
-  STA $020b
+  STA $022b
 
   ; bottom right tile (x + 8, y + 8)
   LDA player_y
   CLC
-  ADC #$08
-  STA $020c
+  SBC #$08
+  STA $022c
   LDA player_x
   CLC
   ADC #$08
-  STA $020f
+  STA $022f
 
   
   ; JSR animation
@@ -669,93 +503,6 @@ forever:
   PLP
   RTS
 .endproc
-; .proc draw_player_up_old
-;   ; save registers
-;   PHP
-;   PHA
-;   TXA
-;   PHA
-;   TYA
-;   PHA
-
-;   ; write player tile numbers
-;   start_anim: 
-;   LDA frame_data ;frame data +6
-;   CLC
-;   ADC #$26
-;   STA $0221
-;   LDA frame_data ;frame data + 1
-;   CLC
-;   ADC #$27
-;   STA $0225
-;   LDA frame_data ;frame data +$10
-;   CLC
-;   ADC #$36
-;   STA $0229
-;   LDA frame_data ;frame data +$11
-;   CLC
-;   ADC #$37
-;   STA $022d
-
-;   ; write player ship tile attributes
-;   ; use palette 0
-;   LDA #$00
-;   STA $0222
-;   STA $0226
-;   STA $022a
-;   STA $022e
-
-;   ; store tile locations
-;   ; top left tile:
-;   LDA player_y
-;   CLC
-;   SBC #$10 ;instead of adding 16 bit offset we substract
-;   STA $0220
-;   LDA player_x
-;   STA $0223
-
-;   ; top right tile (x + 8):
-;   LDA player_y
-;   CLC
-;   SBC #$10
-;   STA $0224
-;   LDA player_x
-;   CLC
-;   ADC #$08
-;   STA $0227
-
-;   ; bottom left tile (y + 8):
-;   LDA player_y
-;   CLC
-;   SBC #$08 ; substract 8 bit offset
-;   STA $0228
-;   LDA player_x
-;   STA $022b
-
-;   ; bottom right tile (x + 8, y + 8)
-;   LDA player_y
-;   CLC
-;   SBC #$08
-;   STA $022c
-;   LDA player_x
-;   CLC
-;   ADC #$08
-;   STA $022f
-
-  
-;   ; JSR animation
-  
-
-
-;   ; restore registers and return
-;   PLA
-;   TAY
-;   PLA
-;   TAX
-;   PLA
-;   PLP
-;   RTS
-; .endproc
 
 .proc draw_player_right
   ; save registers
@@ -768,66 +515,67 @@ forever:
 
   ; write player tile numbers
   start_anim: 
-  LDA frame_data ;frame data 
+  LDA frame_data ;frame data +6
   CLC
   ADC #$20
-  STA $0201
-  
-  LDA frame_data ;frame data +1
+  STA $0231 ;Update to next DMA address
+  LDA frame_data ;frame data + 1
   CLC
   ADC #$21
-  STA $0205
+  STA $0235
   LDA frame_data ;frame data +$10
   CLC
   ADC #$30
-  STA $0209
+  STA $0239
   LDA frame_data ;frame data +$11
   CLC
   ADC #$31
-  STA $020d
-
-  
+  STA $023d
 
   ; write player ship tile attributes
   ; use palette 0
   LDA #$00
-  STA $0202
-  STA $0206
-  STA $020a
-  STA $020e
+  STA $0232
+  STA $0236
+  STA $023a
+  STA $023e
 
   ; store tile locations
   ; top left tile:
   LDA player_y
-  STA $0200
+  STA $0230
   LDA player_x
-  STA $0203
+  CLC 
+  ADC #$10 ;offset 16 bits to the right
+  STA $0233
 
   ; top right tile (x + 8):
   LDA player_y
-  STA $0204
+  STA $0234
   LDA player_x
   CLC
-  ADC #$08
-  STA $0207
+  ADC #$18
+  STA $0237
 
   ; bottom left tile (y + 8):
   LDA player_y
   CLC
-  ADC #$08
-  STA $0208
+  ADC #$08 
+  STA $0238
   LDA player_x
-  STA $020b
+  CLC 
+  ADC #$10
+  STA $023b
 
   ; bottom right tile (x + 8, y + 8)
   LDA player_y
   CLC
   ADC #$08
-  STA $020c
+  STA $023c
   LDA player_x
   CLC
-  ADC #$08
-  STA $020f
+  ADC #$18
+  STA $023f
 
   
   ; JSR animation
@@ -843,93 +591,6 @@ forever:
   PLP
   RTS
 .endproc
-; .proc draw_player_right_old
-;   ; save registers
-;   PHP
-;   PHA
-;   TXA
-;   PHA
-;   TYA
-;   PHA
-
-;   ; write player tile numbers
-;   start_anim: 
-;   LDA frame_data ;frame data +6
-;   CLC
-;   ADC #$20
-;   STA $0231 ;Update to next DMA address
-;   LDA frame_data ;frame data + 1
-;   CLC
-;   ADC #$21
-;   STA $0235
-;   LDA frame_data ;frame data +$10
-;   CLC
-;   ADC #$30
-;   STA $0239
-;   LDA frame_data ;frame data +$11
-;   CLC
-;   ADC #$31
-;   STA $023d
-
-;   ; write player ship tile attributes
-;   ; use palette 0
-;   LDA #$00
-;   STA $0232
-;   STA $0236
-;   STA $023a
-;   STA $023e
-
-;   ; store tile locations
-;   ; top left tile:
-;   LDA player_y
-;   STA $0230
-;   LDA player_x
-;   CLC 
-;   ADC #$10 ;offset 16 bits to the right
-;   STA $0233
-
-;   ; top right tile (x + 8):
-;   LDA player_y
-;   STA $0234
-;   LDA player_x
-;   CLC
-;   ADC #$18
-;   STA $0237
-
-;   ; bottom left tile (y + 8):
-;   LDA player_y
-;   CLC
-;   ADC #$08 
-;   STA $0238
-;   LDA player_x
-;   CLC 
-;   ADC #$10
-;   STA $023b
-
-;   ; bottom right tile (x + 8, y + 8)
-;   LDA player_y
-;   CLC
-;   ADC #$08
-;   STA $023c
-;   LDA player_x
-;   CLC
-;   ADC #$18
-;   STA $023f
-
-  
-;   ; JSR animation
-  
-
-
-;   ; restore registers and return
-;   PLA
-;   TAY
-;   PLA
-;   TAX
-;   PLA
-;   PLP
-;   RTS
-; .endproc
 
  
 
@@ -945,7 +606,7 @@ forever:
   INC frame_buffer
 
   LDA frame_buffer
-  CMP #$06 ;nmi is called 60fps
+  CMP #$0f ;nmi is called 60fps
   BEQ next_frame
   JMP exit
 
@@ -979,92 +640,6 @@ forever:
     RTS
 .endproc 
 
-.proc ReadController
-; save registers
-  PHP
-  PHA
-  TXA
-  PHA
-  TYA
-  PHA
-
-
-  LDA #$01
-  STA $4016 ; set to data collection mode 
-  LDA #$00
-  STA $4016 ; set to read data mode
-  LDX #$08 ; Loop 8 times
-ReadControllerLoop:
-  LDA $4016
-  LSR A            ; bit0 -> Carry
-  ROL buttons1     ; bit0 <- Carry
-  DEX              ; If the result is 0, the Z flag is cleared 
-  BNE ReadControllerLoop ;Branch if X reaches 0
-  
-
-    ; restore registers and return
-  exit:
-    PLA
-    TAY
-    PLA
-    TAX
-    PLA
-    PLP
-    RTS
-.endproc 
-
-.proc input_move
-; save registers
-  PHP
-  PHA
-  TXA
-  PHA
-  TYA
-  PHA
-
-  ReadUp: 
-  LDA buttons1       
-  AND #%00001000   ; And raises Z = 1 if they're not equal to the word in buttons1. 
-  BEQ ReadUpDone   ; branch to ReadupDone if button is NOT pressed (0)
-  DEC player_y
-  JSR draw_player_up                     
-  ReadUpDone:
-
-  ReadDown: 
-  LDA buttons1       
-  AND #%00000100 
-  BEQ ReadDownDone   ; branch to ReadDownDone if button is NOT pressed (0)
-  INC player_y
-  JSR draw_player_down                         
-  ReadDownDone:
-
-  ReadLeft: 
-  LDA buttons1       
-  AND #%00000010 
-  BEQ ReadLeftDone   ; branch to ReadLeftDone if button is NOT pressed (0)
-  DEC player_x
-  JSR draw_player_left                        
-  ReadLeftDone:
-
-  ReadRight: 
-  LDA buttons1       
-  AND #%00000001 
-  BEQ ReadRightDone   ; branch to ReadRightDone if button is NOT pressed (0)
-  INC player_x
-  JSR draw_player_right                        
-  ReadRightDone:
-
-    ; restore registers and return
-  exit:
-    PLA
-    TAY
-    PLA
-    TAX
-    PLA
-    PLP
-    RTS
-.endproc 
-
 .segment "VECTORS"
 .addr nmi_handler, reset_handler, irq_handler
 
@@ -1075,7 +650,7 @@ palettes:
 .byte $0f, $0c, $07, $13
 .byte $0f, $19, $09, $29
 
-.byte $0f, $20, $27, $12
+.byte $0f, $2d, $10, $15
 .byte $0f, $19, $09, $29
 .byte $0f, $19, $09, $29
 .byte $0f, $19, $09, $29
