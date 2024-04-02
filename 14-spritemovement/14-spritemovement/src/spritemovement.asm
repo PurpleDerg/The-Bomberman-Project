@@ -255,17 +255,17 @@ forever:
 
   ; write player tile numbers
   start_anim: 
-  LDA frame_data ;frame data 
+  LDA frame_data ;frame data TOP LEFT
   STA $0201
-  LDA frame_data ;frame data +1
+  LDA frame_data ;frame data +1 TOP RIGHT
   CLC
   ADC #$01
   STA $0205
-  LDA frame_data ;frame data +$10
+  LDA frame_data ;frame data +$10 BOT LEFT
   CLC
   ADC #$10
   STA $0209
-  LDA frame_data ;frame data +$11
+  LDA frame_data ;frame data +$11 BOT RIGHT
   CLC
   ADC #$11
   STA $020d
