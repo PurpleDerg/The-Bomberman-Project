@@ -1,7 +1,8 @@
 .include "constants.inc"
 
 .segment "ZEROPAGE"
-.importzp player_x, player_y, frame_data
+
+.importzp player_x, player_y, frame_data, L_bit, H_bit
 
 .segment "CODE"
 .import main
@@ -39,6 +40,15 @@ clear_oam:
 	STA player_y
   LDA #$00
   STA frame_data
+
+  L_bit = $0000
+  H_bit = $0001
+  ; LDA L_bit
+  ; STA $0000
+
+  ; LDA H_bit 
+  ; STA $0001
+
 
 vblankwait2:
   BIT $2002

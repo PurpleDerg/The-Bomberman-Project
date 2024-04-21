@@ -8,7 +8,9 @@ player_dir: .res 1
 frame_data: .res 1 
 frame_buffer: .res 1
 buttons1: .res 1
-.exportzp player_x, player_y, frame_data
+  L_bit = $0000
+  H_bit = $0001
+.exportzp player_x, player_y, frame_data, L_bit, H_bit
 
 .segment "CODE"
 .proc irq_handler
@@ -54,6 +56,8 @@ buttons1: .res 1
   STX PPUADDR
   LDX #$00
   STX PPUADDR
+
+  
 load_palettes:
   LDA palettes,X
   STA PPUDATA
@@ -62,133 +66,58 @@ load_palettes:
   BNE load_palettes
 
 	; write nametables
-	; big stars first
-	LDA PPUSTATUS
-	LDA #$20
-	STA PPUADDR
-	LDA #$6b
-	STA PPUADDR
-	LDX #$2f
-	STX PPUDATA
+  LDA PPUSTATUS
+  LDA #$20
+  STA PPUADDR
+  LDA #$00
+  STA PPUADDR
 
-	LDA PPUSTATUS
-	LDA #$21
-	STA PPUADDR
-	LDA #$57
-	STA PPUADDR
-	STX PPUDATA
+  LDA #<bg_nam
+  STA L_bit
+  LDA #>bg_nam
+  STA H_bit
 
-	LDA PPUSTATUS
-	LDA #$22
-	STA PPUADDR
-	LDA #$23
-	STA PPUADDR
-	STX PPUDATA
+  LDX #$00
+  LDY #$00
 
-	LDA PPUSTATUS
-	LDA #$23
-	STA PPUADDR
-	LDA #$52
-	STA PPUADDR
-	STX PPUDATA
+namloop:
+  LDA ($00), Y 
+  STA PPUDATA
+  INY 
+  CPY #$00
+  BNE namloop
+  INC H_bit
+  INX
+  CPX #$04
+  BNE namloop
+;Background color setup
+LDA $2002
+LDA #$3F
+STA $2006
+LDA #$00
+STA $2006
+LDX #$00
 
-	; next, small star 1
-	LDA PPUSTATUS
-	LDA #$20
-	STA PPUADDR
-	LDA #$74
-	STA PPUADDR
-	LDX #$2d
-	STX PPUDATA
 
-	LDA PPUSTATUS
-	LDA #$21
-	STA PPUADDR
-	LDA #$43
-	STA PPUADDR
-	STX PPUDATA
 
-	LDA PPUSTATUS
-	LDA #$21
-	STA PPUADDR
-	LDA #$5d
-	STA PPUADDR
-	STX PPUDATA
-
-	LDA PPUSTATUS
-	LDA #$21
-	STA PPUADDR
-	LDA #$73
-	STA PPUADDR
-	STX PPUDATA
-
-	LDA PPUSTATUS
-	LDA #$22
-	STA PPUADDR
-	LDA #$2f
-	STA PPUADDR
-	STX PPUDATA
-
-	LDA PPUSTATUS
-	LDA #$22
-	STA PPUADDR
-	LDA #$f7
-	STA PPUADDR
-	STX PPUDATA
-
-	; finally, small star 2
-	LDA PPUSTATUS
-	LDA #$20
-	STA PPUADDR
-	LDA #$f1
-	STA PPUADDR
-	LDX #$2e
-	STX PPUDATA
-
-	LDA PPUSTATUS
-	LDA #$21
-	STA PPUADDR
-	LDA #$a8
-	STA PPUADDR
-	STX PPUDATA
-
-	LDA PPUSTATUS
-	LDA #$22
-	STA PPUADDR
-	LDA #$7a
-	STA PPUADDR
-	STX PPUDATA
-
-	LDA PPUSTATUS
-	LDA #$23
-	STA PPUADDR
-	LDA #$44
-	STA PPUADDR
-	STX PPUDATA
-
-	LDA PPUSTATUS
-	LDA #$23
-	STA PPUADDR
-	LDA #$7c
-	STA PPUADDR
-	STX PPUDATA
+	
 
 	; finally, attribute table
-	LDA PPUSTATUS
-	LDA #$23
-	STA PPUADDR
-	LDA #$c2
-	STA PPUADDR
-	LDA #%01000000
-	STA PPUDATA
+	; LDA PPUSTATUS
+	; LDA #$23
+	; STA PPUADDR
+	; LDA #$c2
+	; STA PPUADDR
+	; LDA #%01000000
+	; STA PPUDATA
 
-	LDA PPUSTATUS
-	LDA #$23
-	STA PPUADDR
-	LDA #$e0
-	STA PPUADDR
-	LDA #%00001100
-	STA PPUDATA
+	; LDA PPUSTATUS
+	; LDA #$23
+	; STA PPUADDR
+	; LDA #$e0
+	; STA PPUADDR
+	; LDA #%00001100
+	; STA PPUDATA
 
 vblankwait:       ; wait for another vblank before continuing
   BIT PPUSTATUS
@@ -805,6 +734,11 @@ ReadControllerLoop:
     RTS
 .endproc 
 
+bg_nam:
+  .incbin "maptest.nam"
+bg_pal:
+  .incbin "bg_pal.pal"
+
 .segment "VECTORS"
 .addr nmi_handler, reset_handler, irq_handler
 
@@ -822,5 +756,4 @@ palettes:
 
 .segment "CHR"
 .incbin "starfield1.chr"
-.segment "BG"
-.incbin "maptest.nam"
+
