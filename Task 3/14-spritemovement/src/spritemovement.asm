@@ -7,6 +7,7 @@ player_y: .res 1
 player_dir: .res 1
 frame_data: .res 1 
 frame_buffer: .res 1
+scroll: .res 1  
 buttons1: .res 1
   L_bit = $0000
   H_bit = $0001
@@ -37,12 +38,9 @@ buttons1: .res 1
   
   jsr ReadController
   jsr input_move
+  jsr scrolldone
   
   
-  
-
-	STA $2005
-	STA $2005
   RTI
 .endproc
 
@@ -103,7 +101,7 @@ LDX #$00
 	
 
 	; finally, attribute table
-	; LDA PPUSTATUS
+	; LDA PPUSTATUS  
 	; LDA #$23
 	; STA PPUADDR
 	; LDA #$c2
@@ -711,17 +709,56 @@ ReadControllerLoop:
   LDA buttons1       
   AND #%00000010 
   BEQ ReadLeftDone   ; branch to ReadLeftDone if button is NOT pressed (0)
-  DEC player_x
-  JSR draw_player_left                        
+  ;DEC player_x
+  JSR draw_player_left
+  DEC scroll
   ReadLeftDone:
 
   ReadRight: 
   LDA buttons1       
   AND #%00000001 
   BEQ ReadRightDone   ; branch to ReadRightDone if button is NOT pressed (0)
-  INC player_x
-  JSR draw_player_right                        
+  ;INC player_x
+  JSR draw_player_right 
+  INC scroll
   ReadRightDone:
+
+    ; restore registers and return
+  exit:
+    PLA
+    TAY
+    PLA
+    TAX
+    PLA
+    PLP
+    RTS
+.endproc 
+
+.proc scrolldone
+; save registers
+  PHP
+  PHA
+  TXA
+  PHA
+  TYA
+  PHA
+
+  LDA #$00
+  STA $2003       
+  LDA #$02
+  STA $4014       ; sprite DMA from $0200
+  
+  ; run other game graphics updating code here
+  
+  LDA #$00
+  STA $2006        ; clean up PPU address registers
+  STA $2006
+
+  LDA scroll
+  STA $2005        ; write the horizontal scroll count register
+
+  LDA #$00         ; no vertical scrolling
+  STA $2005
 
     ; restore registers and return
   exit:
