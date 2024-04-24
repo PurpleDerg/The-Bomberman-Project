@@ -699,7 +699,7 @@ ReadControllerLoop:
 
   ReadDown: 
   LDA buttons1       
-  AND #%00000100 
+  AND #%00000100  ; And raises Z = 1 if they're not equal to the word in buttons1.
   BEQ ReadDownDone   ; branch to ReadDownDone if button is NOT pressed (0)
   INC player_y
   JSR draw_player_down                         
@@ -707,20 +707,36 @@ ReadControllerLoop:
 
   ReadLeft: 
   LDA buttons1       
-  AND #%00000010 
+  AND #%00000010  ; And raises Z = 1 if they're not equal to the word in buttons1.
   BEQ ReadLeftDone   ; branch to ReadLeftDone if button is NOT pressed (0)
-  ;DEC player_x
-  JSR draw_player_left
-  DEC scroll
+  JSR draw_player_left ;set render sprite to left
+  LDA scroll 
+  CMP #$01 ;check if scroll hit wall
+  BCC hit_left 
+  LDA player_x ;check if player in center
+  CMP #$80
+  BCS hit_left
+  DEC scroll ;else case move screen
+  JMP ReadLeftDone
+  hit_left:  ; if player not in center or border of map is hit 
+  DEC player_x
   ReadLeftDone:
 
   ReadRight: 
   LDA buttons1       
-  AND #%00000001 
+  AND #%00000001  ; And raises Z = 1 if they're not equal to the word in buttons1.
   BEQ ReadRightDone   ; branch to ReadRightDone if button is NOT pressed (0)
-  ;INC player_x
-  JSR draw_player_right 
-  INC scroll
+  JSR draw_player_right ;set render sprite to right
+  LDA scroll
+  CMP #$ff ;check if scroll hit wall
+  BCS hit_right
+  LDA player_x
+  CMP #$80 ;check if player in center
+  BCC hit_right
+  INC scroll ;else case move screen
+  JMP ReadRightDone
+  hit_right: ; if player not in center or border of map is hit
+  INC player_x
   ReadRightDone:
 
     ; restore registers and return
@@ -742,18 +758,7 @@ ReadControllerLoop:
   PHA
   TYA
   PHA
-
-  LDA #$00
-  STA $2003       
-  LDA #$02
-  STA $4014       ; sprite DMA from $0200
   
-  ; run other game graphics updating code here
-  
-  LDA #$00
-  STA $2006        ; clean up PPU address registers
-  STA $2006
-
   LDA scroll
   STA $2005        ; write the horizontal scroll count register
 
