@@ -80,16 +80,34 @@ load_palettes:
   STA PPUADDR
 
   LDX #$00
-  load_Backgrounds: 
+  load_Background0: 
     STX level ;Current position of map 
-    LDA maptest, x
+    LDA nametable0, x
     STA maplevel ; What's currently going to be printed 
     
     JSR Decode ;Returns DECODED HighBit AND LOBit of nametable address based on LEVEL
     JSR printSupertile ;Prints the LEVEL tiles
     INX 
-    CPX #$0c 
-    BNE load_Backgrounds
+    CPX #$3c ;Total bytes to load
+    BNE load_Background1
+
+  LDA PPUSTATUS
+  LDA #$24
+  STA PPUADDR
+  LDA #$00
+  STA PPUADDR
+  
+  LDX #$00
+load_Background1: 
+    STX level ;Current position of map 
+    LDA nametable1, x
+    STA maplevel ; What's currently going to be printed 
+    
+    JSR Decode ;Returns DECODED HighBit AND LOBit of nametable address based on LEVEL
+    JSR printSupertile ;Prints the LEVEL tiles
+    INX 
+    CPX #$3c ;Total bytes to load
+    BNE load_Background1
 
 
   
@@ -168,9 +186,9 @@ forever:
   TYA
   PHA
  
-  LDX #$00
+  LDX #$00 
 start:
-  LDA maplevel
+  LDA maplevel ;MapLevel stores the 1 byte word that will be used to checked per iteration
   AND #%11000000
   CMP #%00000000
   BEQ Iron
@@ -568,6 +586,7 @@ decoding:
   ASL A
   ASL A
   ASL A ;What we have in A is Myb
+  CLC
   ADC Mxb
   STA NTBL_index ;store LOW BIT OF NAMETABLE ADRESS
 
@@ -1212,10 +1231,26 @@ supertile:
  .byte $07, $08, $17, $18 ; Brick Tile 8,9,10,11
  .byte $0a, $0b, $1a, $1b ; Flower Tile 12,13,14,15
 
-maptest: 
+nametable1: 
+   ;Iron 00
+   ;Floor 01
+   ;Brick 10
+   ;Flower 11
   .byte %10101010, %10101010, %10101010, %10101010
-  .byte %10010101, %01010101, %00010101, %01010110
-  .byte %10010000, %00000001, %00010000, %00000110
+  .byte %10010101, %00010101, %01010101, %01010101
+  .byte %10010001, %00000001, %01000101, %00000000
+  .byte %10010001, %11110101, %01010101, %11010110
+  .byte %10010101, %00000000, %01110000, %00000110
+  .byte %10010001, %00010111, %01010101, %01000110
+  .byte %01010111, %00010101, %01010101, %01010110
+  .byte %10010100, %00000011, %01010100, %00001110
+  .byte %10010101, %01010111, %00010001, %01010110
+  .byte %10010001, %01010111, %00000001, %00000110
+  .byte %10010000, %00000011, %01110101, %01010110
+  .byte %10010001, %01010101, %01000101, %01000110
+  .byte %10110001, %01000001, %01000101, %00010110
+  .byte %10111101, %01010101, %01000101, %01010010
+  .byte %10101010, %10101010, %10101010, %10101010
   
 	
 .segment "CHR"
