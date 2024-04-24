@@ -88,7 +88,7 @@ load_palettes:
     JSR Decode ;Returns DECODED HighBit AND LOBit of nametable address based on LEVEL
     JSR printSupertile ;Prints the LEVEL tiles
     INX 
-    CPX #$04 
+    CPX #$0c 
     BNE load_Backgrounds
 
 
@@ -207,8 +207,9 @@ start:
 
 
 loopend: 
-  ASL A 
-  ASL A 
+  ASL maplevel
+  ASL maplevel
+  
   INX
 
   INC NTBL_index
@@ -1213,6 +1214,9 @@ supertile:
 
 maptest: 
   .byte %10101010, %10101010, %10101010, %10101010
+  .byte %10010101, %01010101, %00010101, %01010110
+  .byte %10010000, %00000001, %00010000, %00000110
+  
 	
 .segment "CHR"
 .incbin "starfield1.chr"
