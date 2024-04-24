@@ -88,7 +88,7 @@ load_palettes:
   STA PPUADDR
   LDA NTBL_index
   STA PPUADDR
-  LDX #$05
+  LDX supertile
   STX PPUDATA
 
 
