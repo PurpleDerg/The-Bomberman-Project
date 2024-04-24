@@ -88,7 +88,7 @@ load_palettes:
     JSR Decode ;Returns DECODED HighBit AND LOBit of nametable address based on LEVEL
     JSR printSupertile ;Prints the LEVEL tiles
     INX 
-    CPX #$0c 
+    CPX #$3c
     BNE load_Backgrounds
 
 
@@ -568,6 +568,7 @@ decoding:
   ASL A
   ASL A
   ASL A ;What we have in A is Myb
+  CLC
   ADC Mxb
   STA NTBL_index ;store LOW BIT OF NAMETABLE ADRESS
 
@@ -1212,10 +1213,32 @@ supertile:
  .byte $07, $08, $17, $18 ; Brick Tile 8,9,10,11
  .byte $0a, $0b, $1a, $1b ; Flower Tile 12,13,14,15
 
-maptest: 
+nametable0: 
   .byte %10101010, %10101010, %10101010, %10101010
   .byte %10010101, %01010101, %00010101, %01010110
   .byte %10010000, %00000001, %00010000, %00000110
+  .byte %10010101, %01010101, %11010101, %01010010
+
+  .byte %10010000, %00000001, %00111111, %01010110
+  .byte %10010001, %01010100, %00010000, %00000010
+  .byte %10011111, %11010101, %00010101, %01010101
+  .byte %10010000, %00000001, %00010100, %00000010
+
+  .byte %10010101, %01010101, %00010101, %01010110
+  .byte %10010001, %01010000, %00010000, %00000010
+  .byte %10010001, %01001111, %11010001, %01010110
+  .byte %10010001, %01001100, %00010001, %00000110
+  
+
+  .byte %10110000, %00001101, %01010001, %00000110
+  .byte %10111101, %01010001, %01010101, %01010110
+  .byte %10101010, %10101010, %10101010, %10101010
+
+
+
+
+
+  
   
 	
 .segment "CHR"
