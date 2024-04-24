@@ -13,9 +13,11 @@ Mxb: .res 1
 NTBH_index: .res 1
 NTBL_index: .res 1
 maplevel: .res 1
+Namoffset: .res 1 ;THIS ONLY WORKS BY FIXING MIRRORING VERTICAL 
   ; L_bit = $0000
   ; H_bit = $0001
 level: .res 1 
+NTflag: .res 1
 
 .exportzp player_x, player_y, frame_data, level
 
@@ -79,17 +81,11 @@ load_palettes:
   LDA #$00
   STA PPUADDR
 
-  LDX #$00
-  load_Backgrounds: 
-    STX level ;Current position of map 
-    LDA maptest, x
-    STA maplevel ; What's currently going to be printed 
-    
-    JSR Decode ;Returns DECODED HighBit AND LOBit of nametable address based on LEVEL
-    JSR printSupertile ;Prints the LEVEL tiles
-    INX 
-    CPX #$3c
-    BNE load_Backgrounds
+
+  JSR loadstage1
+
+
+ 
 
 
   
@@ -160,6 +156,106 @@ forever:
   JMP forever
 .endproc
 
+.proc loadstage1
+  PHP
+  PHA
+  TXA
+  PHA
+  TYA
+  PHA
+
+   LDX #$00
+  load_Background0: 
+    LDY #$20
+    STY Namoffset
+    STX level ;Current position of map 
+    LDA nametable0, x
+    STA maplevel ; What's currently going to be printed 
+    
+    JSR Decode ;Returns DECODED HighBit AND LOBit of nametable address based on LEVEL
+    JSR printSupertile ;Prints the LEVEL tiles
+    INX 
+    CPX #$3c ;Total bytes to load
+    BNE load_Background0
+
+  
+  
+  LDX #$00
+  STX level
+load_Background1: 
+    LDY #$24
+    STY Namoffset
+    STX level ;Current position of map 
+    LDA nametable1, x
+    STA maplevel ; What's currently going to be printed 
+    
+    JSR Decode ;Returns DECODED HighBit AND LOBit of nametable address based on LEVEL
+    JSR printSupertile ;Prints the LEVEL tiles
+    INX 
+    CPX #$3c ;Total bytes to load
+    BNE load_Background1
+
+
+  PLA
+  TAY
+  PLA
+  TAX
+  PLA
+  PLP
+  RTS
+
+.endproc
+
+.proc loadstage2
+  PHP
+  PHA
+  TXA
+  PHA
+  TYA
+  PHA
+
+   LDX #$00
+  load_Background2: 
+    LDY #$20
+    STY Namoffset
+    STX level ;Current position of map 
+    LDA nametable0, x
+    STA maplevel ; What's currently going to be printed 
+    
+    JSR Decode ;Returns DECODED HighBit AND LOBit of nametable address based on LEVEL
+    JSR printSupertile ;Prints the LEVEL tiles
+    INX 
+    CPX #$3c ;Total bytes to load
+    BNE load_Background2
+
+  
+  
+  LDX #$00
+  STX level
+load_Background3: 
+    LDY #$24
+    STY Namoffset
+    STX level ;Current position of map 
+    LDA nametable1, x
+    STA maplevel ; What's currently going to be printed 
+    
+    JSR Decode ;Returns DECODED HighBit AND LOBit of nametable address based on LEVEL
+    JSR printSupertile ;Prints the LEVEL tiles
+    INX 
+    CPX #$3c ;Total bytes to load
+    BNE load_Background3
+
+
+  PLA
+  TAY
+  PLA
+  TAX
+  PLA
+  PLP
+  RTS
+
+.endproc
+
 .proc printSupertile
   PHP
   PHA
@@ -168,9 +264,9 @@ forever:
   TYA
   PHA
  
-  LDX #$00
+  LDX #$00 
 start:
-  LDA maplevel
+  LDA maplevel ;MapLevel stores the 1 byte word that will be used to checked per iteration
   AND #%11000000
   CMP #%00000000
   BEQ Iron
@@ -245,7 +341,7 @@ loopend:
   LDA PPUSTATUS ;Sequence To print TopLeft tile 
   LDA NTBH_index
   CLC
-  ADC #$20 ;Manage base address of nametable 0, $2000
+  ADC Namoffset ;Manage base address of nametable 0, $2000
   STA PPUADDR
   LDA NTBL_index
   STA PPUADDR
@@ -255,7 +351,7 @@ loopend:
   LDA PPUSTATUS ;Sequence To print TopRight tile 
   LDA NTBH_index
   CLC
-  ADC #$20 ;a
+  ADC Namoffset ;a
   STA PPUADDR
   LDA NTBL_index
   CLC
@@ -267,7 +363,7 @@ loopend:
   LDA PPUSTATUS ;Sequence To print BottomLeft tile 
   LDA NTBH_index
   CLC
-  ADC #$20
+  ADC Namoffset
   STA PPUADDR
   LDA NTBL_index 
   CLC 
@@ -279,7 +375,7 @@ loopend:
   LDA PPUSTATUS ;Sequence To print BottomRight tile 
   LDA NTBH_index
   CLC
-  ADC #$20
+  ADC Namoffset
   STA PPUADDR
   LDA NTBL_index
   CLC
@@ -308,7 +404,7 @@ loopend:
   LDA PPUSTATUS ;Sequence To print TopLeft tile 
   LDA NTBH_index
   CLC
-  ADC #$20 ;Manage base address of nametable 0, $2000
+  ADC Namoffset ;Manage base address of nametable 0, $2000
   STA PPUADDR
   LDA NTBL_index
   STA PPUADDR
@@ -318,7 +414,7 @@ loopend:
   LDA PPUSTATUS ;Sequence To print TopRight tile 
   LDA NTBH_index
   CLC
-  ADC #$20 ;a
+  ADC Namoffset ;a
   STA PPUADDR
   LDA NTBL_index 
   CLC 
@@ -330,7 +426,7 @@ loopend:
   LDA PPUSTATUS ;Sequence To print BottomLeft tile 
   LDA NTBH_index
   CLC
-  ADC #$20
+  ADC Namoffset
   STA PPUADDR
   LDA NTBL_index  
   CLC 
@@ -342,7 +438,7 @@ loopend:
   LDA PPUSTATUS ;Sequence To print BottomRight tile 
   LDA NTBH_index
   CLC
-  ADC #$20
+  ADC Namoffset
   STA PPUADDR
   LDA NTBL_index 
   CLC 
@@ -371,7 +467,7 @@ loopend:
   LDA PPUSTATUS ;Sequence To print TopLeft tile 
   LDA NTBH_index
   CLC
-  ADC #$20 ;Manage base address of nametable 0, $2000
+  ADC Namoffset ;Manage base address of nametable 0, $2000
   STA PPUADDR
   LDA NTBL_index 
   STA PPUADDR
@@ -381,7 +477,7 @@ loopend:
   LDA PPUSTATUS ;Sequence To print TopRight tile 
   LDA NTBH_index
   CLC
-  ADC #$20 ;a
+  ADC Namoffset ;a
   STA PPUADDR
   LDA NTBL_index ;ADD 1 for offset
   CLC
@@ -393,7 +489,7 @@ loopend:
   LDA PPUSTATUS ;Sequence To print BottomLeft tile 
   LDA NTBH_index
   CLC
-  ADC #$20
+  ADC Namoffset
   STA PPUADDR
   LDA NTBL_index ;ADD 32 for offset
   CLC 
@@ -405,7 +501,7 @@ loopend:
   LDA PPUSTATUS ;Sequence To print BottomRight tile 
   LDA NTBH_index
   CLC
-  ADC #$20
+  ADC Namoffset
   STA PPUADDR
   LDA NTBL_index ; ADD 33 for offset
   CLC 
@@ -434,7 +530,7 @@ loopend:
   LDA PPUSTATUS ;Sequence To print TopLeft tile 
   LDA NTBH_index
   CLC
-  ADC #$20 ;Manage base address of nametable 0, $2000
+  ADC Namoffset ;Manage base address of nametable 0, $2000
   STA PPUADDR
   LDA NTBL_index
   STA PPUADDR
@@ -444,7 +540,7 @@ loopend:
   LDA PPUSTATUS ;Sequence To print TopRight tile 
   LDA NTBH_index
   CLC
-  ADC #$20 ;a
+  ADC Namoffset ;a
   STA PPUADDR
   LDA NTBL_index ;Same as previous subroutines ADD 1
   CLC
@@ -456,7 +552,7 @@ loopend:
   LDA PPUSTATUS ;Sequence To print BottomLeft tile 
   LDA NTBH_index
   CLC
-  ADC #$20
+  ADC Namoffset
   STA PPUADDR
   LDA NTBL_index ;ADD 32 offset for nametable address, same as previous subs
   CLC 
@@ -468,7 +564,7 @@ loopend:
   LDA PPUSTATUS ;Sequence To print BottomRight tile 
   LDA NTBH_index
   CLC
-  ADC #$20
+  ADC Namoffset
   STA PPUADDR
   LDA NTBL_index ; ADD 33 
   CLC 
@@ -477,47 +573,7 @@ loopend:
   LDX supertile + 15
   STX PPUDATA
 
-  PLA
-  TAY
-  PLA
-  TAX
-  PLA
-  PLP
-  RTS
-
-  STA PPUADDR
-  LDX supertile + 4
-  STX PPUDATA
-
-  LDA PPUSTATUS ;Sequence To print TopRight tile 
-  LDA NTBH_index
-  CLC
-  ADC #$20 ;a
-  STA PPUADDR
-  LDA NTBL_index
-  STA PPUADDR
-  LDX supertile + 4
-  STX PPUDATA
-
-  LDA PPUSTATUS ;Sequence To print BottomLeft tile 
-  LDA NTBH_index
-  CLC
-  ADC #$20
-  STA PPUADDR
-  LDA NTBL_index
-  STA PPUADDR
-  LDX supertile + 4
-  STX PPUDATA
-
-  LDA PPUSTATUS ;Sequence To print BottomRight tile 
-  LDA NTBH_index
-  CLC
-  ADC #$20
-  STA PPUADDR
-  LDA NTBL_index
-  STA PPUADDR
-  LDX supertile + 4
-  STX PPUDATA
+ 
 
   PLA
   TAY
@@ -1176,6 +1232,15 @@ ReadControllerLoop:
   JSR draw_player_right                        
   ReadRightDone:
 
+  ReadA: 
+  LDA buttons1
+  AND #%10000000
+  BEQ ReadADone 
+  LDX #$01
+  STX NTflag
+  ReadADone:
+
+
     ; restore registers and return
   exit:
     PLA
@@ -1234,11 +1299,25 @@ nametable0:
   .byte %10111101, %01010001, %01010101, %01010110
   .byte %10101010, %10101010, %10101010, %10101010
 
+nametable1: 
+  .byte %10101010, %10101010, %10101010, %10101010
+  .byte %10010101, %00010101, %01010101, %01010101
+  .byte %10010001, %00000001, %01000101, %00000000
+  .byte %10010001, %11110101, %01010101, %11010110
+  .byte %10010101, %00000000, %01110000, %00000110
+  .byte %10010001, %00010111, %01010101, %01000110
+  .byte %01010111, %00010101, %01010101, %01010110
+  .byte %10010100, %00000011, %01010100, %00001110
+  .byte %10010101, %01010111, %00010001, %01010110
+  .byte %10010001, %01010111, %00000001, %00000110
+  .byte %10010000, %00000011, %01110101, %01010110
+  .byte %10010001, %01010101, %01000101, %01000110
+  .byte %10110001, %01000001, %01000101, %00010110
+  .byte %10111101, %01010101, %01000101, %01010010
+  .byte %10101010, %10101010, %10101010, %10101010
 
 
 
-
-  
   
 	
 .segment "CHR"
