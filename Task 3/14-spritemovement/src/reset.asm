@@ -44,8 +44,7 @@ clear_oam:
   ; L_bit = $0000
   ; H_bit = $0001
 
-  LDA #$26
-  STA level
+ 
   ; LDA L_bit
   ; STA $0000
 

@@ -12,6 +12,7 @@ Myb: .res 1
 Mxb: .res 1 
 NTBH_index: .res 1
 NTBL_index: .res 1
+maplevel: .res 1
   ; L_bit = $0000
   ; H_bit = $0001
 level: .res 1 
@@ -78,18 +79,20 @@ load_palettes:
   LDA #$00
   STA PPUADDR
 
-  JSR Decode
+  LDX #$00
+  load_Backgrounds: 
+    STX level ;Current position of map 
+    LDA maptest, x
+    STA maplevel ; What's currently going to be printed 
+    
+    JSR Decode ;Returns DECODED HighBit AND LOBit of nametable address based on LEVEL
+    JSR printSupertile ;Prints the LEVEL tiles
+    INX 
+    CPX #$04 
+    BNE load_Backgrounds
 
 
-  LDA PPUSTATUS ;Sequence To print TopLeft tile 
-  LDA NTBH_index
-  CLC
-  ADC #$20
-  STA PPUADDR
-  LDA NTBL_index
-  STA PPUADDR
-  LDX supertile
-  STX PPUDATA
+  
 
 
 
@@ -126,7 +129,7 @@ load_palettes:
 
 	
 
-	; finally, attribute table
+	;finally, attribute table
 	LDA PPUSTATUS
 	LDA #$23
 	STA PPUADDR
@@ -156,6 +159,375 @@ vblankwait:       ; wait for another vblank before continuing
 forever:
   JMP forever
 .endproc
+
+.proc printSupertile
+  PHP
+  PHA
+  TXA
+  PHA
+  TYA
+  PHA
+ 
+  LDX #$00
+start:
+  LDA maplevel
+  AND #%11000000
+  CMP #%00000000
+  BEQ Iron
+
+  AND #%11000000
+  CMP #%01000000
+  BEQ Wall
+
+  AND #%11000000
+  CMP #%10000000
+  BEQ Brick
+
+  AND #%11000000
+  CMP #%11000000
+  BEQ Flower
+
+  
+
+  
+  Iron: 
+    JSR printIron   ; 00
+    JMP loopend
+          
+  Wall:
+    JSR printFloor   ; 01
+    JMP loopend
+  Brick:
+    JSR printBrick  ;10
+    JMP loopend
+              
+  Flower:           ; 11
+    JSR printFlower 
+    JMP loopend
+
+
+loopend: 
+  ASL A 
+  ASL A 
+  INX
+
+  INC NTBL_index
+  INC NTBL_index
+
+  CPX #$04
+  BNE start
+  
+
+
+
+
+  PLA
+  TAY
+  PLA
+  TAX
+  PLA
+  PLP
+  RTS
+
+
+
+.endproc
+
+.proc printFloor
+  PHP
+  PHA
+  TXA
+  PHA
+  TYA
+  PHA
+
+  LDA PPUSTATUS ;Sequence To print TopLeft tile 
+  LDA NTBH_index
+  CLC
+  ADC #$20 ;Manage base address of nametable 0, $2000
+  STA PPUADDR
+  LDA NTBL_index
+  STA PPUADDR
+  LDX supertile + 7
+  STX PPUDATA
+
+  LDA PPUSTATUS ;Sequence To print TopRight tile 
+  LDA NTBH_index
+  CLC
+  ADC #$20 ;a
+  STA PPUADDR
+  LDA NTBL_index
+  CLC
+  ADC #$01 ;LoBit + 1
+  STA PPUADDR
+  LDX supertile + 7
+  STX PPUDATA
+
+  LDA PPUSTATUS ;Sequence To print BottomLeft tile 
+  LDA NTBH_index
+  CLC
+  ADC #$20
+  STA PPUADDR
+  LDA NTBL_index 
+  CLC 
+  ADC #$20 ;32
+  STA PPUADDR
+  LDX supertile + 7
+  STX PPUDATA
+
+  LDA PPUSTATUS ;Sequence To print BottomRight tile 
+  LDA NTBH_index
+  CLC
+  ADC #$20
+  STA PPUADDR
+  LDA NTBL_index
+  CLC
+  ADC #$21 ; +33
+  STA PPUADDR
+  LDX supertile + 7
+  STX PPUDATA
+
+  PLA
+  TAY
+  PLA
+  TAX
+  PLA
+  PLP
+  RTS
+.endproc
+
+.proc printBrick
+  PHP
+  PHA
+  TXA
+  PHA
+  TYA
+  PHA
+
+  LDA PPUSTATUS ;Sequence To print TopLeft tile 
+  LDA NTBH_index
+  CLC
+  ADC #$20 ;Manage base address of nametable 0, $2000
+  STA PPUADDR
+  LDA NTBL_index
+  STA PPUADDR
+  LDX supertile + 8
+  STX PPUDATA
+
+  LDA PPUSTATUS ;Sequence To print TopRight tile 
+  LDA NTBH_index
+  CLC
+  ADC #$20 ;a
+  STA PPUADDR
+  LDA NTBL_index 
+  CLC 
+  ADC #$01 ; Add 1
+  STA PPUADDR
+  LDX supertile + 9
+  STX PPUDATA
+
+  LDA PPUSTATUS ;Sequence To print BottomLeft tile 
+  LDA NTBH_index
+  CLC
+  ADC #$20
+  STA PPUADDR
+  LDA NTBL_index  
+  CLC 
+  ADC #$20 ;ADD 32 Offset
+  STA PPUADDR
+  LDX supertile + 10
+  STX PPUDATA
+
+  LDA PPUSTATUS ;Sequence To print BottomRight tile 
+  LDA NTBH_index
+  CLC
+  ADC #$20
+  STA PPUADDR
+  LDA NTBL_index 
+  CLC 
+  ADC #$21 ;ADD 33
+  STA PPUADDR
+  LDX supertile + 11
+  STX PPUDATA
+
+  PLA
+  TAY
+  PLA
+  TAX
+  PLA
+  PLP
+  RTS
+.endproc
+
+.proc printIron
+  PHP
+  PHA
+  TXA
+  PHA
+  TYA
+  PHA
+
+  LDA PPUSTATUS ;Sequence To print TopLeft tile 
+  LDA NTBH_index
+  CLC
+  ADC #$20 ;Manage base address of nametable 0, $2000
+  STA PPUADDR
+  LDA NTBL_index 
+  STA PPUADDR
+  LDX supertile 
+  STX PPUDATA
+
+  LDA PPUSTATUS ;Sequence To print TopRight tile 
+  LDA NTBH_index
+  CLC
+  ADC #$20 ;a
+  STA PPUADDR
+  LDA NTBL_index ;ADD 1 for offset
+  CLC
+  ADC #$01
+  STA PPUADDR
+  LDX supertile + 1
+  STX PPUDATA
+
+  LDA PPUSTATUS ;Sequence To print BottomLeft tile 
+  LDA NTBH_index
+  CLC
+  ADC #$20
+  STA PPUADDR
+  LDA NTBL_index ;ADD 32 for offset
+  CLC 
+  ADC #$20
+  STA PPUADDR
+  LDX supertile + 2
+  STX PPUDATA
+
+  LDA PPUSTATUS ;Sequence To print BottomRight tile 
+  LDA NTBH_index
+  CLC
+  ADC #$20
+  STA PPUADDR
+  LDA NTBL_index ; ADD 33 for offset
+  CLC 
+  ADC #$21
+  STA PPUADDR
+  LDX supertile + 3
+  STX PPUDATA
+
+  PLA
+  TAY
+  PLA
+  TAX
+  PLA
+  PLP
+  RTS
+.endproc
+
+.proc printFlower
+  PHP
+  PHA
+  TXA
+  PHA
+  TYA
+  PHA
+
+  LDA PPUSTATUS ;Sequence To print TopLeft tile 
+  LDA NTBH_index
+  CLC
+  ADC #$20 ;Manage base address of nametable 0, $2000
+  STA PPUADDR
+  LDA NTBL_index
+  STA PPUADDR
+  LDX supertile + 12
+  STX PPUDATA
+
+  LDA PPUSTATUS ;Sequence To print TopRight tile 
+  LDA NTBH_index
+  CLC
+  ADC #$20 ;a
+  STA PPUADDR
+  LDA NTBL_index ;Same as previous subroutines ADD 1
+  CLC
+  ADC #$01
+  STA PPUADDR
+  LDX supertile + 13
+  STX PPUDATA
+
+  LDA PPUSTATUS ;Sequence To print BottomLeft tile 
+  LDA NTBH_index
+  CLC
+  ADC #$20
+  STA PPUADDR
+  LDA NTBL_index ;ADD 32 offset for nametable address, same as previous subs
+  CLC 
+  ADC #$20
+  STA PPUADDR
+  LDX supertile + 14
+  STX PPUDATA
+
+  LDA PPUSTATUS ;Sequence To print BottomRight tile 
+  LDA NTBH_index
+  CLC
+  ADC #$20
+  STA PPUADDR
+  LDA NTBL_index ; ADD 33 
+  CLC 
+  ADC #$21
+  STA PPUADDR
+  LDX supertile + 15
+  STX PPUDATA
+
+  PLA
+  TAY
+  PLA
+  TAX
+  PLA
+  PLP
+  RTS
+
+  STA PPUADDR
+  LDX supertile + 4
+  STX PPUDATA
+
+  LDA PPUSTATUS ;Sequence To print TopRight tile 
+  LDA NTBH_index
+  CLC
+  ADC #$20 ;a
+  STA PPUADDR
+  LDA NTBL_index
+  STA PPUADDR
+  LDX supertile + 4
+  STX PPUDATA
+
+  LDA PPUSTATUS ;Sequence To print BottomLeft tile 
+  LDA NTBH_index
+  CLC
+  ADC #$20
+  STA PPUADDR
+  LDA NTBL_index
+  STA PPUADDR
+  LDX supertile + 4
+  STX PPUDATA
+
+  LDA PPUSTATUS ;Sequence To print BottomRight tile 
+  LDA NTBH_index
+  CLC
+  ADC #$20
+  STA PPUADDR
+  LDA NTBL_index
+  STA PPUADDR
+  LDX supertile + 4
+  STX PPUDATA
+
+  PLA
+  TAY
+  PLA
+  TAX
+  PLA
+  PLP
+  RTS
+.endproc
+
+
 
 .proc Decode
   PHP
@@ -834,9 +1206,13 @@ palettes:
 .byte $0f, $19, $09, $29
 
 supertile:
-  .byte $04, $05, $14, $15
+ .byte $04, $05, $14, $15 ; IronBlock 0,1,2,3
+ .byte $0c, $0d, $1c, $10 ; Floor Tile 4,5,6,7 NUMBER 7 IS BLACK
+ .byte $07, $08, $17, $18 ; Brick Tile 8,9,10,11
+ .byte $0a, $0b, $1a, $1b ; Flower Tile 12,13,14,15
+
 maptest: 
-.byte $08 
+  .byte %10101010, %10101010, %10101010, %10101010
 	
 .segment "CHR"
 .incbin "starfield1.chr"
