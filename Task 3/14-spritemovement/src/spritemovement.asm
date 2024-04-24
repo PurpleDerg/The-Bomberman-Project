@@ -8,9 +8,15 @@ player_dir: .res 1
 frame_data: .res 1 
 frame_buffer: .res 1
 buttons1: .res 1
-  L_bit = $0000
-  H_bit = $0001
-.exportzp player_x, player_y, frame_data, L_bit, H_bit
+Myb: .res 1
+Mxb: .res 1 
+NTBH_index: .res 1
+NTBL_index: .res 1
+  ; L_bit = $0000
+  ; H_bit = $0001
+level: .res 1 
+
+.exportzp player_x, player_y, frame_data, level
 
 .segment "CODE"
 .proc irq_handler
@@ -72,44 +78,62 @@ load_palettes:
   LDA #$00
   STA PPUADDR
 
-  LDA #<bg_nam
-  STA L_bit
-  LDA #>bg_nam
-  STA H_bit
+  JSR Decode
 
-  LDX #$00
-  LDY #$00
 
-namloop:
-  LDA ($00), Y 
-  STA PPUDATA
-  INY 
-  CPY #$00
-  BNE namloop
-  INC H_bit
-  INX
-  CPX #$04
-  BNE namloop
-;Background color setup
-LDA $2002
-LDA #$3F
-STA $2006
-LDA #$00
-STA $2006
-LDX #$00
+  LDA PPUSTATUS ;Sequence To print TopLeft tile 
+  LDA NTBH_index
+  CLC
+  ADC #$20
+  STA PPUADDR
+  LDA NTBL_index
+  STA PPUADDR
+  LDX #$05
+  STX PPUDATA
+
+
+
+
+  
+
+;   LDA #<bg_nam
+;   STA L_bit
+;   LDA #>bg_nam
+;   STA H_bit
+
+;   LDX #$00
+;   LDY #$00
+
+; namloop:
+;   LDA ($00), Y 
+;   STA PPUDATA
+;   INY 
+;   CPY #$00
+;   BNE namloop
+;   INC H_bit
+;   INX
+;   CPX #$04
+;   BNE namloop
+; ;Background color setup
+; LDA $2002x
+; LDA #$3F
+; STA $2006
+; LDA #$00
+; STA $2006
+; LDX #$00
 
 
 
 	
 
 	; finally, attribute table
-	; LDA PPUSTATUS
-	; LDA #$23
-	; STA PPUADDR
-	; LDA #$c2
-	; STA PPUADDR
-	; LDA #%01000000
-	; STA PPUDATA
+	LDA PPUSTATUS
+	LDA #$23
+	STA PPUADDR
+	LDA #$d8
+	STA PPUADDR
+	LDA #%01000000
+	STA PPUDATA
 
 	; LDA PPUSTATUS
 	; LDA #$23
@@ -132,6 +156,61 @@ vblankwait:       ; wait for another vblank before continuing
 forever:
   JMP forever
 .endproc
+
+.proc Decode
+  PHP
+  PHA
+  TXA
+  PHA
+  TYA
+  PHA
+
+  ;Decode START
+decoding:
+  LDA level ;MEGATILE INDEX 8 
+  LSR A ;Shift MEGATILE Right *2, to calulate Myb
+  LSR A 
+  STA Myb ;Store Myb in memory 
+
+  LDA level ; PUT MEGATILE INDEX into A for math
+  AND #%00000011 ;Modulo 4 = Mindex&&0x03
+  STA Mxb  ;Store Mxb in X 
+
+  LDA Myb ;RESTORE Y in A for math 
+  LSR A ;Shift 2 times right again
+  LSR A 
+  AND #%00000011 ;Do the the mask again for the 2
+  STA NTBH_index ;save Highbyte for NAMETABLE address
+
+  LDA Mxb ;RESTORE X in A for math for Mxb
+  ASL A ;Shift left 3 times = A*8
+  ASL A 
+  ASL A 
+  STA Mxb ;store updated value
+
+  LDA Myb ;RESTORE Myb in A for Math
+  ASL A ;Shift left 6 times = A*64
+  ASL A
+  ASL A
+  ASL A
+  ASL A
+  ASL A ;What we have in A is Myb
+  ADC Mxb
+  STA NTBL_index ;store LOW BIT OF NAMETABLE ADRESS
+
+
+
+
+
+  PLA
+  TAY
+  PLA
+  TAX
+  PLA
+  PLP
+  RTS
+.endproc
+
 
 .proc update_player
   PHP
@@ -754,6 +833,11 @@ palettes:
 .byte $0f, $19, $09, $29
 .byte $0f, $19, $09, $29
 
+supertile:
+  .byte $04, $05, $14, $15
+maptest: 
+.byte $08 
+	
 .segment "CHR"
 .incbin "starfield1.chr"
 

@@ -65,7 +65,7 @@ load_palettes:
 	LDA #$6b
 	STA PPUADDR
 	LDX #$2f
-	STX PPUDATA
+	STX PPUDATA 
 
 	LDA PPUSTATUS
 	LDA #$21
