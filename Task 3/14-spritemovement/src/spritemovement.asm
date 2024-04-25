@@ -46,7 +46,31 @@ NTflag: .res 1
   
   jsr ReadController
   jsr input_move
+  ; LDA NTflag
+  ; CMP #$01
+  ; BEQ stage2
+  ; JMP continue
   
+  ; stage2:
+  ;   LDA PPUSTATUS
+  ;   LDA #$20
+  ;   STA PPUADDR
+  ;   LDA #$00
+  ;   STA PPUADDR
+
+    
+
+  ;   LDA #$00
+  ;   STA PPUCTRL
+  ;   STA PPUMASK
+  ;   JSR loadstage2
+  ;   LDA #%10001000
+  ;   STA PPUCTRL
+
+  ;   LDA #%00011110  ; turn on screen
+  ;   STA PPUMASK
+  
+  ; continue:
   
   
 
@@ -66,7 +90,7 @@ NTflag: .res 1
   LDX #$00
   STX PPUADDR
 
-  
+LDX #$00  
 load_palettes:
   LDA palettes,X
   STA PPUDATA
@@ -75,14 +99,60 @@ load_palettes:
   BNE load_palettes
 
 	; write nametables
-  LDA PPUSTATUS
-  LDA #$20
-  STA PPUADDR
-  LDA #$00
-  STA PPUADDR
+  ; LDA PPUSTATUS
+  ; LDA #$20
+  ; STA PPUADDR
+  ; LDA #$00
+  ; STA PPUADDR
 
 
-  JSR loadstage1
+  LDA NTflag
+  CMP #$00
+  BEQ stage1
+
+
+  CMP #$01
+  BEQ stage2
+
+  JMP continue
+  
+  stage1: 
+    LDA PPUSTATUS
+    LDA #$20
+    STA PPUADDR
+    LDA #$00
+    STA PPUADDR
+
+    LDA #$00   ;EVERYTIME THAT YOU WANT TO LOAD A BACKGROUND, YOU HAVE TO CLEAN UP PPUCTRL AND PPUMASK
+    STA PPUCTRL
+    STA PPUMASK
+    JSR loadstage1
+    LDA #%10001000
+    STA PPUCTRL   ;SETUP VALUES OF THE PPUCTRL
+
+    LDA #%00011110  ; turn on screen AGAIN
+    STA PPUMASK
+    JMP continue
+
+  stage2:
+    LDA PPUSTATUS
+    LDA #$20
+    STA PPUADDR
+    LDA #$00
+    STA PPUADDR
+
+    LDA #$00   ;EVERYTIME THAT YOU WANT TO LOAD A BACKGROUND, YOU HAVE TO CLEAN UP PPUCTRL AND PPUMASK
+    STA PPUCTRL
+    STA PPUMASK
+    JSR loadstage2
+    LDA #%10001000
+    STA PPUCTRL   ;SETUP VALUES OF THE PPUCTRL
+
+    LDA #%00011110  ; turn on screen AGAIN
+    STA PPUMASK
+
+  continue: 
+
 
 
  
@@ -164,7 +234,7 @@ forever:
   TYA
   PHA
 
-   LDX #$00
+    LDX #$00
   load_Background0: 
     LDY #$20
     STY Namoffset
@@ -180,9 +250,9 @@ forever:
 
   
   
-  LDX #$00
-  STX level
-load_Background1: 
+    LDX #$00
+    STX level
+  load_Background1: 
     LDY #$24
     STY Namoffset
     STX level ;Current position of map 
@@ -214,7 +284,7 @@ load_Background1:
   TYA
   PHA
 
-   LDX #$00
+    LDX #$00
   load_Background2: 
     LDY #$20
     STY Namoffset
@@ -230,9 +300,9 @@ load_Background1:
 
   
   
-  LDX #$00
-  STX level
-load_Background3: 
+    LDX #$00
+    STX level
+  load_Background3: 
     LDY #$24
     STY Namoffset
     STX level ;Current position of map 
@@ -264,7 +334,7 @@ load_Background3:
   TYA
   PHA
  
-  LDX #$00 
+  LDX #$00 ;set i = 0
 start:
   LDA maplevel ;MapLevel stores the 1 byte word that will be used to checked per iteration
   AND #%11000000
@@ -306,12 +376,12 @@ loopend:
   ASL maplevel
   ASL maplevel
   
-  INX
+  INX ;Increase iterator of loop
 
   INC NTBL_index
   INC NTBL_index
 
-  CPX #$04
+  CPX #$04 ;if i <=4, break 
   BNE start
   
 
@@ -597,7 +667,7 @@ loopend:
   ;Decode START
 decoding:
   LDA level ;MEGATILE INDEX 8 
-  LSR A ;Shift MEGATILE Right *2, to calulate Myb
+  LSR A ;Shift MEGATILE Right /2, to calulate Myb
   LSR A 
   STA Myb ;Store Myb in memory 
 
@@ -1234,11 +1304,31 @@ ReadControllerLoop:
 
   ReadA: 
   LDA buttons1
-  AND #%10000000
+  AND #%10000000 ; branch to ReadA if button is NOT pressed (0)
   BEQ ReadADone
-  JSR loadstage2 
-  ; LDX #$01
-  ; STX NTflag
+
+  LDA NTflag
+  CMP #$00
+  BEQ returnToMain
+  CMP #$01 
+  BEQ returnToMain
+  JMP ReadADone
+
+  returnToMain:
+    INC NTflag
+    jmp main
+  ; LDX NTflag
+  ; CPX #$01
+  ; BEQ resetNTFlag
+  
+  ; INC NTflag
+  ; JMP main
+
+  ; resetNTn
+  ;   LDX #$00
+  ;   STX NTflag
+  ;   JMP main
+
   ReadADone:
 
 
