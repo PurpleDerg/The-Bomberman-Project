@@ -9,9 +9,18 @@ frame_data: .res 1
 frame_buffer: .res 1
 scroll: .res 1  
 buttons1: .res 1
-  L_bit = $0000
-  H_bit = $0001
-.exportzp player_x, player_y, frame_data, L_bit, H_bit
+Myb: .res 1
+Mxb: .res 1 
+NTBH_index: .res 1
+NTBL_index: .res 1
+maplevel: .res 1
+Namoffset: .res 1 ;THIS ONLY WORKS BY FIXING MIRRORING VERTICAL 
+  ; L_bit = $0000
+  ; H_bit = $0001
+level: .res 1 
+NTflag: .res 1
+
+.exportzp player_x, player_y, frame_data, level
 
 .segment "CODE"
 .proc irq_handler
@@ -55,7 +64,7 @@ buttons1: .res 1
   LDX #$00
   STX PPUADDR
 
-  
+LDX #$00  
 load_palettes:
   LDA palettes,X
   STA PPUDATA
@@ -64,50 +73,110 @@ load_palettes:
   BNE load_palettes
 
 	; write nametables
-  LDA PPUSTATUS
-  LDA #$20
-  STA PPUADDR
-  LDA #$00
-  STA PPUADDR
+  ; LDA PPUSTATUS
+  ; LDA #$20
+  ; STA PPUADDR
+  ; LDA #$00
+  ; STA PPUADDR
 
-  LDA #<bg_nam
-  STA L_bit
-  LDA #>bg_nam
-  STA H_bit
 
-  LDX #$00
-  LDY #$00
+  LDA NTflag
+  CMP #$00
+  BEQ stage1
 
-namloop:
-  LDA ($00), Y 
-  STA PPUDATA
-  INY 
-  CPY #$00
-  BNE namloop
-  INC H_bit
-  INX
-  CPX #$04
-  BNE namloop
-;Background color setup
-LDA $2002
-LDA #$3F
-STA $2006
-LDA #$00
-STA $2006
-LDX #$00
+
+  CMP #$01
+  BEQ stage2
+
+  JMP continue
+  
+  stage1: 
+    LDA PPUSTATUS
+    LDA #$20
+    STA PPUADDR
+    LDA #$00
+    STA PPUADDR
+
+    LDA #$00   ;EVERYTIME THAT YOU WANT TO LOAD A BACKGROUND, YOU HAVE TO CLEAN UP PPUCTRL AND PPUMASK
+    STA PPUCTRL
+    STA PPUMASK
+    JSR loadstage1
+    LDA #%10001000
+    STA PPUCTRL   ;SETUP VALUES OF THE PPUCTRL
+
+    LDA #%00011110  ; turn on screen AGAIN
+    STA PPUMASK
+    JMP continue
+
+  stage2:
+    LDA PPUSTATUS
+    LDA #$20
+    STA PPUADDR
+    LDA #$00
+    STA PPUADDR
+
+    LDA #$00   ;EVERYTIME THAT YOU WANT TO LOAD A BACKGROUND, YOU HAVE TO CLEAN UP PPUCTRL AND PPUMASK
+    STA PPUCTRL
+    STA PPUMASK
+    JSR loadstage2
+    LDA #%10001000
+    STA PPUCTRL   ;SETUP VALUES OF THE PPUCTRL
+
+    LDA #%00011110  ; turn on screen AGAIN
+    STA PPUMASK
+
+  continue: 
+
+
+
+ 
+
+
+  
+
+
+
+
+  
+
+;   LDA #<bg_nam
+;   STA L_bit
+;   LDA #>bg_nam
+;   STA H_bit
+
+;   LDX #$00
+;   LDY #$00
+
+; namloop:
+;   LDA ($00), Y 
+;   STA PPUDATA
+;   INY 
+;   CPY #$00
+;   BNE namloop
+;   INC H_bit
+;   INX
+;   CPX #$04
+;   BNE namloop
+; ;Background color setup
+; LDA $2002x
+; LDA #$3F
+; STA $2006
+; LDA #$00
+; STA $2006
+; LDX #$00
 
 
 
 	
 
-	; finally, attribute table
-	; LDA PPUSTATUS  
-	; LDA #$23
-	; STA PPUADDR
-	; LDA #$c2
-	; STA PPUADDR
-	; LDA #%01000000
-	; STA PPUDATA
+	;finally, attribute table
+	LDA PPUSTATUS
+	LDA #$23
+	STA PPUADDR
+	LDA #$d8
+	STA PPUADDR
+	LDA #%01000000
+	STA PPUDATA
 
 	; LDA PPUSTATUS
 	; LDA #$23
@@ -130,6 +199,492 @@ vblankwait:       ; wait for another vblank before continuing
 forever:
   JMP forever
 .endproc
+
+.proc loadstage1
+  PHP
+  PHA
+  TXA
+  PHA
+  TYA
+  PHA
+
+    LDX #$00
+  load_Background0: 
+    LDY #$20
+    STY Namoffset
+    STX level ;Current position of map 
+    LDA nametable0, x
+    STA maplevel ; What's currently going to be printed 
+    
+    JSR Decode ;Returns DECODED HighBit AND LOBit of nametable address based on LEVEL
+    JSR printSupertile ;Prints the LEVEL tiles
+    INX 
+    CPX #$3c ;Total bytes to load
+    BNE load_Background0
+
+  
+  
+    LDX #$00
+    STX level
+  load_Background1: 
+    LDY #$24
+    STY Namoffset
+    STX level ;Current position of map 
+    LDA nametable1, x
+    STA maplevel ; What's currently going to be printed 
+    
+    JSR Decode ;Returns DECODED HighBit AND LOBit of nametable address based on LEVEL
+    JSR printSupertile ;Prints the LEVEL tiles
+    INX 
+    CPX #$3c ;Total bytes to load
+    BNE load_Background1
+
+
+  PLA
+  TAY
+  PLA
+  TAX
+  PLA
+  PLP
+  RTS
+
+.endproc
+
+.proc loadstage2
+  PHP
+  PHA
+  TXA
+  PHA
+  TYA
+  PHA
+
+    LDX #$00
+  load_Background2: 
+    LDY #$20
+    STY Namoffset
+    STX level ;Current position of map 
+    LDA nametable2, x
+    STA maplevel ; What's currently going to be printed 
+    
+    JSR Decode ;Returns DECODED HighBit AND LOBit of nametable address based on LEVEL
+    JSR printSupertile ;Prints the LEVEL tiles
+    INX 
+    CPX #$3c ;Total bytes to load
+    BNE load_Background2
+
+  
+  
+    LDX #$00
+    STX level
+  load_Background3: 
+    LDY #$24
+    STY Namoffset
+    STX level ;Current position of map 
+    LDA nametable3, x
+    STA maplevel ; What's currently going to be printed 
+    
+    JSR Decode ;Returns DECODED HighBit AND LOBit of nametable address based on LEVEL
+    JSR printSupertile ;Prints the LEVEL tiles
+    INX 
+    CPX #$3c ;Total bytes to load
+    BNE load_Background3
+
+
+  PLA
+  TAY
+  PLA
+  TAX
+  PLA
+  PLP
+  RTS
+
+.endproc
+
+.proc printSupertile
+  PHP
+  PHA
+  TXA
+  PHA
+  TYA
+  PHA
+ 
+  LDX #$00 ;set i = 0
+start:
+  LDA maplevel ;MapLevel stores the 1 byte word that will be used to checked per iteration
+  AND #%11000000
+  CMP #%00000000
+  BEQ Iron
+
+  AND #%11000000
+  CMP #%01000000
+  BEQ Wall
+
+  AND #%11000000
+  CMP #%10000000
+  BEQ Brick
+
+  AND #%11000000
+  CMP #%11000000
+  BEQ Flower
+
+  
+
+  
+  Iron: 
+    JSR printIron   ; 00
+    JMP loopend
+          
+  Wall:
+    JSR printFloor   ; 01
+    JMP loopend
+  Brick:
+    JSR printBrick  ;10
+    JMP loopend
+              
+  Flower:           ; 11
+    JSR printFlower 
+    JMP loopend
+
+
+loopend: 
+  ASL maplevel
+  ASL maplevel
+  
+  INX ;Increase iterator of loop
+
+  INC NTBL_index
+  INC NTBL_index
+
+  CPX #$04 ;if i <=4, break 
+  BNE start
+  
+
+
+
+
+  PLA
+  TAY
+  PLA
+  TAX
+  PLA
+  PLP
+  RTS
+
+
+
+.endproc
+
+.proc printFloor
+  PHP
+  PHA
+  TXA
+  PHA
+  TYA
+  PHA
+
+  LDA PPUSTATUS ;Sequence To print TopLeft tile 
+  LDA NTBH_index
+  CLC
+  ADC Namoffset ;Manage base address of nametable 0, $2000
+  STA PPUADDR
+  LDA NTBL_index
+  STA PPUADDR
+  LDX supertile + 7
+  STX PPUDATA
+
+  LDA PPUSTATUS ;Sequence To print TopRight tile 
+  LDA NTBH_index
+  CLC
+  ADC Namoffset ;a
+  STA PPUADDR
+  LDA NTBL_index
+  CLC
+  ADC #$01 ;LoBit + 1
+  STA PPUADDR
+  LDX supertile + 7
+  STX PPUDATA
+
+  LDA PPUSTATUS ;Sequence To print BottomLeft tile 
+  LDA NTBH_index
+  CLC
+  ADC Namoffset
+  STA PPUADDR
+  LDA NTBL_index 
+  CLC 
+  ADC #$20 ;32
+  STA PPUADDR
+  LDX supertile + 7
+  STX PPUDATA
+
+  LDA PPUSTATUS ;Sequence To print BottomRight tile 
+  LDA NTBH_index
+  CLC
+  ADC Namoffset
+  STA PPUADDR
+  LDA NTBL_index
+  CLC
+  ADC #$21 ; +33
+  STA PPUADDR
+  LDX supertile + 7
+  STX PPUDATA
+
+  PLA
+  TAY
+  PLA
+  TAX
+  PLA
+  PLP
+  RTS
+.endproc
+
+.proc printBrick
+  PHP
+  PHA
+  TXA
+  PHA
+  TYA
+  PHA
+
+  LDA PPUSTATUS ;Sequence To print TopLeft tile 
+  LDA NTBH_index
+  CLC
+  ADC Namoffset ;Manage base address of nametable 0, $2000
+  STA PPUADDR
+  LDA NTBL_index
+  STA PPUADDR
+  LDX supertile + 8
+  STX PPUDATA
+
+  LDA PPUSTATUS ;Sequence To print TopRight tile 
+  LDA NTBH_index
+  CLC
+  ADC Namoffset ;a
+  STA PPUADDR
+  LDA NTBL_index 
+  CLC 
+  ADC #$01 ; Add 1
+  STA PPUADDR
+  LDX supertile + 9
+  STX PPUDATA
+
+  LDA PPUSTATUS ;Sequence To print BottomLeft tile 
+  LDA NTBH_index
+  CLC
+  ADC Namoffset
+  STA PPUADDR
+  LDA NTBL_index  
+  CLC 
+  ADC #$20 ;ADD 32 Offset
+  STA PPUADDR
+  LDX supertile + 10
+  STX PPUDATA
+
+  LDA PPUSTATUS ;Sequence To print BottomRight tile 
+  LDA NTBH_index
+  CLC
+  ADC Namoffset
+  STA PPUADDR
+  LDA NTBL_index 
+  CLC 
+  ADC #$21 ;ADD 33
+  STA PPUADDR
+  LDX supertile + 11
+  STX PPUDATA
+
+  PLA
+  TAY
+  PLA
+  TAX
+  PLA
+  PLP
+  RTS
+.endproc
+
+.proc printIron
+  PHP
+  PHA
+  TXA
+  PHA
+  TYA
+  PHA
+
+  LDA PPUSTATUS ;Sequence To print TopLeft tile 
+  LDA NTBH_index
+  CLC
+  ADC Namoffset ;Manage base address of nametable 0, $2000
+  STA PPUADDR
+  LDA NTBL_index 
+  STA PPUADDR
+  LDX supertile 
+  STX PPUDATA
+
+  LDA PPUSTATUS ;Sequence To print TopRight tile 
+  LDA NTBH_index
+  CLC
+  ADC Namoffset ;a
+  STA PPUADDR
+  LDA NTBL_index ;ADD 1 for offset
+  CLC
+  ADC #$01
+  STA PPUADDR
+  LDX supertile + 1
+  STX PPUDATA
+
+  LDA PPUSTATUS ;Sequence To print BottomLeft tile 
+  LDA NTBH_index
+  CLC
+  ADC Namoffset
+  STA PPUADDR
+  LDA NTBL_index ;ADD 32 for offset
+  CLC 
+  ADC #$20
+  STA PPUADDR
+  LDX supertile + 2
+  STX PPUDATA
+
+  LDA PPUSTATUS ;Sequence To print BottomRight tile 
+  LDA NTBH_index
+  CLC
+  ADC Namoffset
+  STA PPUADDR
+  LDA NTBL_index ; ADD 33 for offset
+  CLC 
+  ADC #$21
+  STA PPUADDR
+  LDX supertile + 3
+  STX PPUDATA
+
+  PLA
+  TAY
+  PLA
+  TAX
+  PLA
+  PLP
+  RTS
+.endproc
+
+.proc printFlower
+  PHP
+  PHA
+  TXA
+  PHA
+  TYA
+  PHA
+
+  LDA PPUSTATUS ;Sequence To print TopLeft tile 
+  LDA NTBH_index
+  CLC
+  ADC Namoffset ;Manage base address of nametable 0, $2000
+  STA PPUADDR
+  LDA NTBL_index
+  STA PPUADDR
+  LDX supertile + 12
+  STX PPUDATA
+
+  LDA PPUSTATUS ;Sequence To print TopRight tile 
+  LDA NTBH_index
+  CLC
+  ADC Namoffset ;a
+  STA PPUADDR
+  LDA NTBL_index ;Same as previous subroutines ADD 1
+  CLC
+  ADC #$01
+  STA PPUADDR
+  LDX supertile + 13
+  STX PPUDATA
+
+  LDA PPUSTATUS ;Sequence To print BottomLeft tile 
+  LDA NTBH_index
+  CLC
+  ADC Namoffset
+  STA PPUADDR
+  LDA NTBL_index ;ADD 32 offset for nametable address, same as previous subs
+  CLC 
+  ADC #$20
+  STA PPUADDR
+  LDX supertile + 14
+  STX PPUDATA
+
+  LDA PPUSTATUS ;Sequence To print BottomRight tile 
+  LDA NTBH_index
+  CLC
+  ADC Namoffset
+  STA PPUADDR
+  LDA NTBL_index ; ADD 33 
+  CLC 
+  ADC #$21
+  STA PPUADDR
+  LDX supertile + 15
+  STX PPUDATA
+
+ 
+
+  PLA
+  TAY
+  PLA
+  TAX
+  PLA
+  PLP
+  RTS
+.endproc
+
+
+
+.proc Decode
+  PHP
+  PHA
+  TXA
+  PHA
+  TYA
+  PHA
+
+  ;Decode START
+decoding:
+  LDA level ;MEGATILE INDEX 8 
+  LSR A ;Shift MEGATILE Right /2, to calulate Myb
+  LSR A 
+  STA Myb ;Store Myb in memory 
+
+  LDA level ; PUT MEGATILE INDEX into A for math
+  AND #%00000011 ;Modulo 4 = Mindex&&0x03
+  STA Mxb  ;Store Mxb in X 
+
+  LDA Myb ;RESTORE Y in A for math 
+  LSR A ;Shift 2 times right again
+  LSR A 
+  AND #%00000011 ;Do the the mask again for the 2
+  STA NTBH_index ;save Highbyte for NAMETABLE address
+
+  LDA Mxb ;RESTORE X in A for math for Mxb
+  ASL A ;Shift left 3 times = A*8
+  ASL A 
+  ASL A 
+  STA Mxb ;store updated value
+
+  LDA Myb ;RESTORE Myb in A for Math
+  ASL A ;Shift left 6 times = A*64
+  ASL A
+  ASL A
+  ASL A
+  ASL A
+  ASL A ;What we have in A is Myb
+  CLC
+  ADC Mxb
+  STA NTBL_index ;store LOW BIT OF NAMETABLE ADRESS
+
+
+
+
+
+  PLA
+  TAY
+  PLA
+  TAX
+  PLA
+  PLP
+  RTS
+.endproc
+
 
 .proc update_player
   PHP
@@ -739,6 +1294,36 @@ ReadControllerLoop:
   INC player_x
   ReadRightDone:
 
+  ReadA: 
+  LDA buttons1
+  AND #%10000000 ; branch to ReadA if button is NOT pressed (0)
+  BEQ ReadADone
+
+  LDA NTflag
+  CMP #$00
+  BEQ returnToMain
+  CMP #$01 
+  BEQ returnToMain
+  JMP ReadADone
+
+  returnToMain:
+    INC NTflag
+    jmp main
+  ; LDX NTflag
+  ; CPX #$01
+  ; BEQ resetNTFlag
+  
+  ; INC NTflag
+  ; JMP main
+
+  ; resetNTn
+  ;   LDX #$00
+  ;   STX NTflag
+  ;   JMP main
+
+  ReadADone:
+
+
     ; restore registers and return
   exit:
     PLA
@@ -796,6 +1381,87 @@ palettes:
 .byte $0f, $19, $09, $29
 .byte $0f, $19, $09, $29
 
+supertile:
+ .byte $04, $05, $14, $15 ; IronBlock 0,1,2,3
+ .byte $0c, $0d, $1c, $10 ; Floor Tile 4,5,6,7 NUMBER 7 IS BLACK
+ .byte $07, $08, $17, $18 ; Brick Tile 8,9,10,11
+ .byte $0a, $0b, $1a, $1b ; Flower Tile 12,13,14,15
+
+nametable0: 
+  .byte %10101010, %10101010, %10101010, %10101010
+  .byte %10010101, %01010101, %00010101, %01010110
+  .byte %10010000, %00000001, %00010000, %00000110
+  .byte %10010101, %01010101, %11010101, %01010010
+
+  .byte %10010000, %00000001, %00111111, %01010110
+  .byte %10010001, %01010100, %00010000, %00000010
+  .byte %10011111, %11010101, %00010101, %01010101
+  .byte %10010000, %00000001, %00010100, %00000010
+
+  .byte %10010101, %01010101, %00010101, %01010110
+  .byte %10010001, %01010000, %00010000, %00000010
+  .byte %10010001, %01001111, %11010001, %01010110
+  .byte %10010001, %01001100, %00010001, %00000110
+  
+
+  .byte %10110000, %00001101, %01010001, %00000110
+  .byte %10111101, %01010001, %01010101, %01010110
+  .byte %10101010, %10101010, %10101010, %10101010
+
+nametable1: 
+  .byte %10101010, %10101010, %10101010, %10101010
+  .byte %10010101, %00010101, %01010101, %01010101
+  .byte %10010001, %00000001, %01000101, %00000000
+  .byte %10010001, %11110101, %01010101, %11010110
+  .byte %10010101, %00000000, %01110000, %00000110
+  .byte %10010001, %00010111, %01010101, %01000110
+  .byte %01010111, %00010101, %01010101, %01010110
+  .byte %10010100, %00000011, %01010100, %00001110
+  .byte %10010101, %01010111, %00010001, %01010110
+  .byte %10010001, %01010111, %00000001, %00000110
+  .byte %10010000, %00000011, %01110101, %01010110
+  .byte %10010001, %01010101, %01000101, %01000110
+  .byte %10110001, %01000001, %01000101, %00010110
+  .byte %10010000, %00010111, %11110000, %01010010
+  .byte %10111101, %01010101, %01000101, %01010010
+  .byte %10101010, %10101010, %10101010, %10101010
+
+
+nametable2: 
+  .byte %10101010, %10101010, %10101010, %10101010
+  .byte %01010101, %01010100, %01010100, %01000010
+  .byte %10010100, %00110000, %01010000, %01010110
+  .byte %10110100, %00111100, %00010000, %01010110
+  .byte %10110001, %01000100, %01010101, %01000010
+  .byte %10110100, %00010100, %01010101, %01010110
+  .byte %10010101, %01000100, %01010000, %01010110
+  .byte %10010101, %01000100, %00010101, %00000101
+  .byte %10010000, %00010100, %01010000, %01000010
+  .byte %10010100, %00010000, %01000000, %01010110
+  .byte %10000101, %01010100, %01010111, %11010110
+  .byte %10010000, %00000100, %00010000, %11010010
+  .byte %10000101, %01000000, %00110101, %01000010
+  .byte %10101010, %10101010, %10101010, %10101010
+
+nametable3: 
+  .byte %10101010, %10101010, %10101010, %10101010
+  .byte %10000000, %00010101, %01010101, %01010110
+  .byte %10010101, %00010000, %00000000, %00010110
+  .byte %10010101, %01010101, %01010101, %01000010
+  .byte %10010000, %01000001, %00000100, %00010110
+  .byte %10011111, %01111111, %00000100, %00010110 
+  .byte %10010000, %01000011, %01010101, %01010110 
+  .byte %01010001, %01010001, %00000000, %00010101
+  .byte %10010000, %01000001, %01000100, %01000010 
+  .byte %10010000, %01000001, %01000100, %01000010 
+  .byte %10010101, %00010101, %01010101, %01010110 
+  .byte %10010101, %01010100, %01000001, %00000110
+  .byte %10010000, %01000001, %01000001, %00000110
+  .byte %10000100, %01000001, %00000000, %00000110
+  .byte %10010101, %01010100, %01010101, %01010100 
+  .byte %10101010, %10101010, %10101010, %10101010
+
+	
 .segment "CHR"
 .incbin "starfield1.chr"
 

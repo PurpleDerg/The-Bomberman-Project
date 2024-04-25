@@ -2,7 +2,7 @@
 
 .segment "ZEROPAGE"
 
-.importzp player_x, player_y, frame_data, L_bit, H_bit
+.importzp player_x, player_y, frame_data, L_bit, H_bit, level
 
 .segment "CODE"
 .import main
@@ -41,8 +41,10 @@ clear_oam:
   LDA #$00
   STA frame_data
 
-  L_bit = $0000
-  H_bit = $0001
+  ; L_bit = $0000
+  ; H_bit = $0001
+
+ 
   ; LDA L_bit
   ; STA $0000
 
