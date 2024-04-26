@@ -57,6 +57,7 @@ iswalkable: .res 1 ;$16
   jsr scrolldone
   JSR pxlclsionset
   jsr getlevel
+  JSR checkcollision
   
   
   RTI
@@ -217,8 +218,8 @@ forever:
   TYA
   PHA
 
-  LDX player_x ;load current player x and y positions into X and Y registers
-  LDY player_y
+  LDX collisionX ;load current player x and y positions into X and Y registers
+  LDY collisionY
 
   ;---------LOGIC TO CHOSE WHICH NAMETABLE TO LOOK INTO COLLISIONS-------------------
 
@@ -242,9 +243,9 @@ continue:
   CMP #$01 ; 1 = stage 2, 0 = stage 1
   BEQ checkstage2 
 
-  LDA absoverflow
-  AND #%00000001 ;If last bit is 1, then check for nt1, otherwise, check for nametable 0
-  BEQ NT1
+  LDA absoverflow  ; #%00000001, if you AND this and it's the same, then Z = 0, meaning that you want to branch if Z = 1
+  AND #%000000001 ;If last bit is 1, then check for nt1, otherwise, check for nametable 0 
+  BNE NT1
   JSR colmap0
   JMP end
 
@@ -305,17 +306,24 @@ startloop:
 docheck:
     ;---------KEEP IN MIND THAT REG A HAS THE SHIFTED LEVEL ACCORDING TO THE CURRENT TILE OF PLAYER-------
     AND #%11000000 ;Check if it's a flower patch since flower = 11bin, If it's not, Z = 1
-    BEQ elsefloor
+    CMP #%11000000
+    BNE elsefloor
     LDX #$01
     STX iswalkable ;could be used in a bitmask in the overflowflag to be honest. too lazy, so time to abuse the zeropage. 
 
     elsefloor: 
-      AND #%0100000
-      BEQ end
+      AND #%11000000
+      CMP #%01000000
+      BNE neither
       LDX #$01
       STX iswalkable
+      JMP end
 
-end:
+    neither:
+      LDX #$00  ;If neither, make sure to indicate it's not walkable 
+      STX iswalkable
+      
+  end:
 
 
   
@@ -609,7 +617,7 @@ end:
   
   ifelsedown: 
     LDA player_dir
-    AND #%00000010 ;check if the player direction is right
+    AND #%00000100 ;check if the player direction is down
     BEQ ifelseup ;If false, go to the else statement
     LDX player_x
     STX collisionX
@@ -620,7 +628,7 @@ end:
 
   ifelseup:
     LDA player_dir
-    AND #%00000010 ;check if the player direction is right
+    AND #%00001000 ;check if the player direction is right
     BEQ end ;If false, go to the else statement
     LDX player_x
     STX collisionX
