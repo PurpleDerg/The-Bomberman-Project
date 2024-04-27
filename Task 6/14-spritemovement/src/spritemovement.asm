@@ -58,6 +58,7 @@ iswalkable: .res 1 ;$16
   JSR pxlclsionset
   jsr getlevel
   JSR checkcollision
+  JSR checkloadzone
   
   
   RTI
@@ -284,6 +285,41 @@ vblankwait:       ; wait for another vblank before continuing
 
 forever:
   JMP forever
+.endproc
+
+
+.proc checkloadzone
+  PHP
+  PHA
+  TXA
+  PHA
+  TYA
+  PHA
+
+  LDA absoverflow
+  CMP #$01
+  BNE skip
+
+  LDA collisionX
+  CMP #$F8
+  BNE skip
+
+  LDX #$01
+  STX NTflag
+  JMP main
+
+
+
+  skip:
+
+
+  PLA
+  TAY
+  PLA
+  TAX
+  PLA
+  PLP
+  RTS
 .endproc
 
 .proc checkcollision
