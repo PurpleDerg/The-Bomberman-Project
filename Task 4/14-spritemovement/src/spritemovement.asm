@@ -98,7 +98,7 @@ load_palettes:
   CMP #$01
   BEQ stage2
 
-  JMP continue
+  JMP loopend_main
   
   stage1: 
     LDA PPUSTATUS
@@ -111,12 +111,51 @@ load_palettes:
     STA PPUCTRL
     STA PPUMASK
     JSR loadstage1
-    LDA #%10001000
-    STA PPUCTRL   ;SETUP VALUES OF THE PPUCTRL
 
-    LDA #%00011110  ; turn on screen AGAIN
-    STA PPUMASK
-    JMP continue
+    LDX #$00
+    LDA PPUSTATUS
+    LDA #$23
+    STA PPUADDR
+    LDA #$c0 
+    STA PPUADDR
+  loadattribute:
+    ; STA PPUADDR
+    ; CLC 
+    ; ADC #$01
+    LDY #%00000000
+    STY PPUDATA
+    INX
+    CPX #$40
+    BNE loadattribute
+
+
+    LDX #$00
+    LDA PPUSTATUS
+    LDA #$27
+    STA PPUADDR
+    LDA #$c0 
+    STA PPUADDR
+  loadattribute1:
+    ; STA PPUADDR
+    ; CLC 
+    ; ADC #$01
+    LDY #%00000000
+    STY PPUDATA
+    INX
+    CPX #$40
+    BNE loadattribute1
+  
+    JMP loopend_main
+
+    ; LDA #%10001000
+    ; STA PPUCTRL   ;SETUP VALUES OF THE PPUCTRL
+
+    ; LDA #%00011110  ; turn on screen AGAIN
+    ; STA PPUMASK
+
+    
+
+
 
   stage2:
     LDA PPUSTATUS
@@ -129,13 +168,56 @@ load_palettes:
     STA PPUCTRL
     STA PPUMASK
     JSR loadstage2
+    LDX #$00
+
+    LDA PPUSTATUS
+    LDA #$23
+    STA PPUADDR
+    LDA #$c0
+    STA PPUADDR   
+  loadattribute2:
+    ; CLC 
+    ; ADC #$01
+    LDY #%01010101
+    STY PPUDATA
+    INX
+    CPX #$40
+    BNE loadattribute2
+
+
+    ; LDA #%10001000
+    ; STA PPUCTRL   ;SETUP VALUES OF THE PPUCTRL
+
+    ; LDA #%00011110  ; turn on screen AGAIN
+    ; STA PPUMASK
+
+
+
+    LDX #$00
+    LDA PPUSTATUS
+    LDA #$27
+    STA PPUADDR
+    LDA #$c0
+    STA PPUADDR   
+  loadattribute3:
+
+    ; CLC 
+    ; ADC #$01
+    LDY #%01010101
+    STY PPUDATA
+    INX
+    CPX #$40
+    BNE loadattribute3
+
+loopend_main:
     LDA #%10001000
     STA PPUCTRL   ;SETUP VALUES OF THE PPUCTRL
 
     LDA #%00011110  ; turn on screen AGAIN
     STA PPUMASK
 
-  continue: 
+
+  
 
 
 
@@ -180,13 +262,7 @@ load_palettes:
 	
 
 	;finally, attribute table
-	LDA PPUSTATUS
-	LDA #$23
-	STA PPUADDR
-	LDA #$d8
-	STA PPUADDR
-	LDA #%01000000
-	STA PPUDATA
+	
 
 	; LDA PPUSTATUS
 	; LDA #$23
@@ -586,7 +662,6 @@ docheck:
   
   
     LDX #$00
-    STX level
   load_Background3: 
     LDY #$24
     STY Namoffset
@@ -1875,16 +1950,21 @@ nametable2:
   .byte %01010101, %01010100, %01010100, %01000010
   .byte %10010100, %00110000, %01010000, %01010110
   .byte %10110100, %00111100, %00010000, %01010110
+
   .byte %10110001, %01000101, %01010101, %01000010
   .byte %10110100, %00010100, %01010101, %01010110
   .byte %10010101, %01000101, %01010000, %01010110
   .byte %10010101, %01000111, %00010101, %00000101
+
   .byte %10010000, %00010100, %01010000, %01000010
   .byte %10010100, %00010000, %01000000, %01010110
   .byte %10000101, %01010100, %01010111, %11010110
   .byte %10010000, %00000100, %00010000, %11010010
-  .byte %10010101, %01010101, %01010101, %01010101
+  
+  .byte %10010101, %01010101, %01010101, %01010110
+  .byte %10010101, %01010101, %01010101, %01010110
   .byte %10101010, %10101010, %10101010, %10101010
+
 
 nametable3: 
   .byte %10101010, %10101010, %10101010, %10101010
@@ -1894,7 +1974,7 @@ nametable3:
   .byte %10010000, %01000001, %00000100, %00010110
   .byte %10011111, %01111111, %00000100, %00010110 
   .byte %10010000, %01000011, %01010101, %01010110 
-  .byte %01010001, %01010001, %00000000, %00010101
+  .byte %01010001, %01010001, %00000000, %00010110
   .byte %10010000, %01000001, %01000100, %01000010 
   .byte %10010000, %01000001, %01000100, %01000010 
   .byte %10010101, %00010101, %01010101, %01010110 
