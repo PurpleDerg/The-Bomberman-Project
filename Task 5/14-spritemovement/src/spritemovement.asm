@@ -2,24 +2,31 @@
 .include "header.inc"
 
 .segment "ZEROPAGE"
-player_x: .res 1
-player_y: .res 1
-player_dir: .res 1
-frame_data: .res 1 
-frame_buffer: .res 1
-scroll: .res 1  
-buttons1: .res 1
-Myb: .res 1
-Mxb: .res 1 
-NTBH_index: .res 1
-NTBL_index: .res 1
-maplevel: .res 1
-Namoffset: .res 1 ;THIS ONLY WORKS BY FIXING MIRRORING VERTICAL 
+player_x: .res 1 ;$00
+player_y: .res 1 ;$01
+absoluteX: .res 1 ;$02
+frame_data: .res 1 ;$03
+frame_buffer: .res 1 ;$04
+scroll: .res 1  ;$05
+buttons1: .res 1 ;$06
+Myb: .res 1 ;$07
+Mxb: .res 1 ;$08
+NTBH_index: .res 1 ;$09
+NTBL_index: .res 1 ;$0A
+maplevel: .res 1 ;$0B
+Namoffset: .res 1 ;THIS ONLY WORKS BY FIXING MIRRORING VERTICAL ;$0C
+collisionX: .res 1 ;$0D
+collisionY: .res 1 ;$0E
   ; L_bit = $0000
   ; H_bit = $0001
-level: .res 1 
-NTflag: .res 1
-
+level: .res 1 ;$0F
+NTflag: .res 1 ;$10
+currentlvl: .res 1 ;$11
+supetileX: .res 1 ; $12
+MegaXb: .res 1 ;$13 
+player_dir: .res 1 ;14$ 
+absoverflow: .res 1 ;$15
+iswalkable: .res 1 ;$16
 .exportzp player_x, player_y, frame_data, level
 
 .segment "CODE"
@@ -48,6 +55,9 @@ NTflag: .res 1
   jsr ReadController
   jsr input_move
   jsr scrolldone
+  JSR pxlclsionset
+  jsr getlevel
+  JSR checkcollision
   
   
   RTI
@@ -58,7 +68,7 @@ NTflag: .res 1
 .export main
 .proc main
   ; write a palette
- LDX PPUSTATUS
+  LDX PPUSTATUS
   LDX #$3f
   STX PPUADDR
   LDX #$00
@@ -276,6 +286,307 @@ forever:
   JMP forever
 .endproc
 
+.proc checkcollision
+  PHP
+  PHA
+  TXA
+  PHA
+  TYA
+  PHA
+
+  LDX collisionX ;load current player x and y positions into X and Y registers
+  LDY collisionY
+
+  ;---------LOGIC TO CHOSE WHICH NAMETABLE TO LOOK INTO COLLISIONS-------------------
+
+  TXA ; do the math if it's nametable 0 or nametable 1 check with player X coordinate
+  CLC 
+  ADC scroll ;Do the math for absoluteX, if that sets the carryflag, then set absoverflow's last bit to 1 
+  BCS setflag ; if C == 1, then branch
+  LDA absoverflow 
+  AND #%00000000   ;Using an OR let's us specify which bit we want to turn on or off in a byte, useful for checking T or F flags
+  STA absoverflow
+  JMP continue
+
+  setflag:
+    LDA absoverflow
+    ORA #%00000001 ;set last bit to 1 
+    STA absoverflow
+
+continue:
+
+  LDA NTflag ;Forgot I already had a flag that determines the current stage. So just check which stage is currently loaded
+  CMP #$01 ; 1 = stage 2, 0 = stage 1
+  BEQ checkstage2 
+
+  LDA absoverflow  ; #%00000001, if you AND this and it's the same, then Z = 0, meaning that you want to branch if Z = 1
+  AND #%000000001 ;If last bit is 1, then check for nt1, otherwise, check for nametable 0 
+  BNE NT1
+  JSR colmap0
+  JMP end
+
+
+  NT1:
+    JSR colmap1
+    JMP end
+
+
+  checkstage2:
+    LDA absoverflow
+    AND #%00000001 ;If last bit is 1, then check for nt1, otherwise, check for nametable 0
+    BNE NT3
+    JSR colmap2
+    JMP end
+  NT3:
+    JSR colmap3
+    JMP end
+
+  
+  end: 
+
+  
+  PLA
+  TAY
+  PLA
+  TAX
+  PLA
+  PLP
+  RTS
+.endproc
+
+.proc colmap0  
+  PHP
+  PHA
+  TXA
+  PHA
+  TYA
+  PHA
+  
+  
+  LDY currentlvl
+  LDA supetileX  ;CHECK IF IT'S DOING MOD 4 correctly 
+  AND #%00000011
+  STA supetileX
+
+  LDA nametable0, Y ;Check the current level of player 
+  LDX #$00
+startloop: 
+  CPX supetileX
+  BEQ docheck
+
+  ASL ;keep looping until you reach the two bits that the collision pixel is in. 
+  ASL
+  INX
+  JMP startloop
+
+docheck:
+    ;---------KEEP IN MIND THAT REG A HAS THE SHIFTED LEVEL ACCORDING TO THE CURRENT TILE OF PLAYER-------
+    AND #%11000000 ;Check if it's a flower patch since flower = 11bin, If it's not, Z = 1
+    CMP #%11000000
+    BNE elsefloor
+    LDX #$01
+    STX iswalkable ;could be used in a bitmask in the overflowflag to be honest. too lazy, so time to abuse the zeropage.
+    JMP end 
+
+    elsefloor: 
+      AND #%11000000
+      CMP #%01000000
+      BNE neither
+      LDX #$01
+      STX iswalkable
+      JMP end
+
+    neither:
+      LDX #$00  ;If neither, make sure to indicate it's not walkable 
+      STX iswalkable
+      
+  end:
+
+
+  
+
+  PLA
+  TAY
+  PLA
+  TAX
+  PLA
+  PLP
+  RTS
+
+.endproc
+
+.proc colmap1  
+  PHP
+  PHA
+  TXA
+  PHA
+  TYA
+  PHA
+  
+  LDY currentlvl
+  LDA supetileX  ;CHECK IF IT'S DOING MOD 4 correctly 
+  AND #%00000011
+  STA supetileX
+
+  LDA nametable1, Y ;Check the current level of player 
+  LDX #$00
+startloop: 
+  CPX supetileX
+  BEQ docheck
+
+  ASL ;keep looping until you reach the two bits that the collision pixel is in. 
+  ASL
+  INX
+  JMP startloop
+
+docheck:
+    ;---------KEEP IN MIND THAT REG A HAS THE SHIFTED LEVEL ACCORDING TO THE CURRENT TILE OF PLAYER-------
+    AND #%11000000 ;Check if it's a flower patch since flower = 11bin, If it's not, Z = 1
+    CMP #%11000000
+    BNE elsefloor
+    LDX #$01
+    STX iswalkable ;could be used in a bitmask in the overflowflag to be honest. too lazy, so time to abuse the zeropage. 
+    JMP end
+
+    elsefloor: 
+      AND #%11000000
+      CMP #%01000000
+      BNE neither
+      LDX #$01
+      STX iswalkable
+      JMP end
+
+    neither:
+      LDX #$00  ;If neither, make sure to indicate it's not walkable 
+      STX iswalkable
+      
+  end:
+
+  PLA
+  TAY
+  PLA
+  TAX
+  PLA
+  PLP
+  RTS
+
+.endproc
+
+.proc colmap2  
+  PHP
+  PHA
+  TXA
+  PHA
+  TYA
+  PHA
+
+  LDY currentlvl
+  LDA supetileX  ;CHECK IF IT'S DOING MOD 4 correctly 
+  AND #%00000011
+  STA supetileX
+  
+  LDA nametable2, Y ;Check the current level of player 
+  LDX #$00
+startloop: 
+  CPX supetileX
+  BEQ docheck
+
+  ASL ;keep looping until you reach the two bits that the collision pixel is in. 
+  ASL
+  INX
+  JMP startloop
+
+docheck:
+    ;---------KEEP IN MIND THAT REG A HAS THE SHIFTED LEVEL ACCORDING TO THE CURRENT TILE OF PLAYER-------
+    AND #%11000000 ;Check if it's a flower patch since flower = 11bin, If it's not, Z = 1
+    CMP #%11000000
+    BNE elsefloor
+    LDX #$01
+    STX iswalkable ;could be used in a bitmask in the overflowflag to be honest. too lazy, so time to abuse the zeropage. 
+    JMP end
+
+    elsefloor: 
+      AND #%11000000
+      CMP #%01000000
+      BNE neither
+      LDX #$01
+      STX iswalkable
+      JMP end
+
+    neither:
+      LDX #$00  ;If neither, make sure to indicate it's not walkable 
+      STX iswalkable
+      
+  end:
+
+  PLA
+  TAY
+  PLA
+  TAX
+  PLA
+  PLP
+  RTS
+
+.endproc
+
+.proc colmap3  
+  PHP
+  PHA
+  TXA
+  PHA
+  TYA
+  PHA
+
+  LDY currentlvl
+  LDA supetileX  ;CHECK IF IT'S DOING MOD 4 correctly 
+  AND #%00000011
+  STA supetileX
+
+  LDA nametable3, Y ;Check the current level of player 
+  LDX #$00
+startloop: 
+  CPX supetileX
+  BEQ docheck
+
+  ASL ;keep looping until you reach the two bits that the collision pixel is in. 
+  ASL
+  INX
+  JMP startloop
+
+docheck:
+    ;---------KEEP IN MIND THAT REG A HAS THE SHIFTED LEVEL ACCORDING TO THE CURRENT TILE OF PLAYER-------
+    AND #%11000000 ;Check if it's a flower patch since flower = 11bin, If it's not, Z = 1
+    CMP #%11000000
+    BNE elsefloor
+    LDX #$01
+    STX iswalkable ;could be used in a bitmask in the overflowflag to be honest. too lazy, so time to abuse the zeropage. 
+    JMP end
+
+    elsefloor: 
+      AND #%11000000
+      CMP #%01000000
+      BNE neither
+      LDX #$01
+      STX iswalkable
+      JMP end
+
+    neither:
+      LDX #$00  ;If neither, make sure to indicate it's not walkable 
+      STX iswalkable
+      
+  end:
+
+  PLA
+  TAY
+  PLA
+  TAX
+  PLA
+  PLP
+  RTS
+
+.endproc
+
+
 .proc loadstage1
   PHP
   PHA
@@ -351,7 +662,6 @@ forever:
   
   
     LDX #$00
-    STX level
   load_Background3: 
     LDY #$24
     STY Namoffset
@@ -374,6 +684,118 @@ forever:
   PLP
   RTS
 
+.endproc
+
+.proc pxlclsionset
+  PHP
+  PHA
+  TXA
+  PHA
+  TYA
+  PHA
+
+    LDA player_dir
+    AND #%00000001 ;check if the player direction is right
+    BEQ ifelseleft ;If false, go to the else statement
+    LDY player_y  
+    STY collisionY
+    LDA player_x
+    CLC 
+    ADC #$10
+    STA collisionX
+
+  ifelseleft: 
+    LDA player_dir
+    AND #%00000010 ;check if the player direction is left
+    BEQ ifelsedown ;If false, go to the else statement
+    LDY player_y
+    STY collisionY
+    LDA player_x
+    CLC 
+    SBC #$01
+    STA collisionX
+  
+  ifelsedown: 
+    LDA player_dir
+    AND #%00000100 ;check if the player direction is down
+    BEQ ifelseup ;If false, go to the else statement
+    LDX player_x
+    STX collisionX
+    LDA player_y
+    CLC 
+    ADC #$10
+    STA collisionY
+
+  ifelseup:
+    LDA player_dir
+    AND #%00001000 ;check if the player direction is right
+    BEQ end ;If false, go to the else statement
+    LDX player_x
+    STX collisionX
+    LDA player_y
+    CLC 
+    SBC #$01
+    STA collisionY
+  
+  end:
+
+
+
+  PLA
+  TAY
+  PLA
+  TAX
+  PLA
+  PLP
+  RTS
+.endproc
+
+.proc getlevel 
+  PHP
+  PHA
+  TXA
+  PHA
+  TYA
+  PHA
+
+  LDX collisionX ;THIS is the collision pixel that will be determining the tile to check. 
+  TXA
+  CLC 
+  ADC scroll
+  STA absoluteX ;Store for testing 
+  
+      ; TXA ;Do math with player X
+  LSR ; Divide X/16 to get SUPERtilespace for X 
+  LSR 
+  LSR 
+  LSR ;We have the SuperTileSpace after dividing by 16
+  STA supetileX ;REMEMBER MOD 4 to find which super tile you are in in a range of 0-3
+
+  LSR
+  LSR ; Now divide by 4 again to obtain Mxb  
+  STA MegaXb ;store MXb 
+
+  LDY collisionY ;THIS 
+  TYA ; Mathing with player_y coord
+  LSR ; Divide Y/16 to get SUPERtilespace for MYb
+  LSR
+  LSR
+  LSR 
+      ; Level = (Myb<<2)+Mxb
+  ASL ;Myb is already in Accumulator, so let's Shift left 2 times
+  ASL
+  CLC 
+  ADC MegaXb ;adding MXb
+  STA currentlvl ; This is gonna store the final result for the level calculation it should be equal to current level
+  
+
+  PLA
+  TAY
+  PLA
+  TAX
+  PLA
+  PLP
+  RTS
 .endproc
 
 .proc printSupertile
@@ -1320,27 +1742,43 @@ ReadControllerLoop:
   TYA
   PHA
 
+
+
+
   ReadUp: 
-  LDA buttons1       
+  LDA buttons1      
   AND #%00001000   ; And raises Z = 1 if they're not equal to the word in buttons1. 
   BEQ ReadUpDone   ; branch to ReadupDone if button is NOT pressed (0)
-  DEC player_y
-  JSR draw_player_up                     
+  STA player_dir
+  JSR draw_player_up
+  LDA iswalkable ;Check if it's a walkable tile
+  AND #$01
+  BEQ ReadUpDone  
+  DEC player_y                  
   ReadUpDone:
 
   ReadDown: 
-  LDA buttons1       
+  LDA buttons1   
   AND #%00000100  ; And raises Z = 1 if they're not equal to the word in buttons1.
   BEQ ReadDownDone   ; branch to ReadDownDone if button is NOT pressed (0)
-  INC player_y
-  JSR draw_player_down                         
+  STA player_dir
+  JSR draw_player_down
+
+  LDA iswalkable ;Check if it's a walkable tile
+  AND #$01
+  BEQ ReadDownDone
+  INC player_y                      
   ReadDownDone:
 
   ReadLeft: 
-  LDA buttons1       
+  LDA buttons1     
   AND #%00000010  ; And raises Z = 1 if they're not equal to the word in buttons1.
   BEQ ReadLeftDone   ; branch to ReadLeftDone if button is NOT pressed (0)
+  STA player_dir
   JSR draw_player_left ;set render sprite to left
+  LDA iswalkable ;Check if it's a walkable tile
+  AND #$01
+  BEQ ReadLeftDone
   LDA scroll 
   CMP #$01 ;check if scroll hit wall
   BCC hit_left 
@@ -1357,7 +1795,11 @@ ReadControllerLoop:
   LDA buttons1       
   AND #%00000001  ; And raises Z = 1 if they're not equal to the word in buttons1.
   BEQ ReadRightDone   ; branch to ReadRightDone if button is NOT pressed (0)
+  STA player_dir
   JSR draw_player_right ;set render sprite to right
+  LDA iswalkable ;Check if it's a walkable tile
+  AND #$01
+  BEQ ReadRightDone
   LDA scroll
   CMP #$ff ;check if scroll hit wall
   BCS hit_right
@@ -1508,16 +1950,21 @@ nametable2:
   .byte %01010101, %01010100, %01010100, %01000010
   .byte %10010100, %00110000, %01010000, %01010110
   .byte %10110100, %00111100, %00010000, %01010110
-  .byte %10110001, %01000100, %01010101, %01000010
+
+  .byte %10110001, %01000101, %01010101, %01000010
   .byte %10110100, %00010100, %01010101, %01010110
-  .byte %10010101, %01000100, %01010000, %01010110
-  .byte %10010101, %01000100, %00010101, %00000101
+  .byte %10010101, %01000101, %01010000, %01010110
+  .byte %10010101, %01000111, %00010101, %00000101
+
   .byte %10010000, %00010100, %01010000, %01000010
   .byte %10010100, %00010000, %01000000, %01010110
   .byte %10000101, %01010100, %01010111, %11010110
   .byte %10010000, %00000100, %00010000, %11010010
-  .byte %10000101, %01000000, %00110101, %01000010
+  
+  .byte %10010101, %01010101, %01010101, %01010110
+  .byte %10010101, %01010101, %01010101, %01010110
   .byte %10101010, %10101010, %10101010, %10101010
+
 
 nametable3: 
   .byte %10101010, %10101010, %10101010, %10101010
@@ -1527,7 +1974,7 @@ nametable3:
   .byte %10010000, %01000001, %00000100, %00010110
   .byte %10011111, %01111111, %00000100, %00010110 
   .byte %10010000, %01000011, %01010101, %01010110 
-  .byte %01010001, %01010001, %00000000, %00010101
+  .byte %01010001, %01010001, %00000000, %00010110
   .byte %10010000, %01000001, %01000100, %01000010 
   .byte %10010000, %01000001, %01000100, %01000010 
   .byte %10010101, %00010101, %01010101, %01010110 
