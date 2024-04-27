@@ -228,7 +228,7 @@ forever:
   ADC scroll ;Do the math for absoluteX, if that sets the carryflag, then set absoverflow's last bit to 1 
   BCS setflag ; if C == 1, then branch
   LDA absoverflow 
-  ORA #%00000000   ;Using an OR let's us specify which bit we want to turn on or off in a byte, useful for checking T or F flags
+  AND #%00000000   ;Using an OR let's us specify which bit we want to turn on or off in a byte, useful for checking T or F flags
   STA absoverflow
   JMP continue
 
@@ -258,7 +258,7 @@ continue:
   checkstage2:
     LDA absoverflow
     AND #%00000001 ;If last bit is 1, then check for nt1, otherwise, check for nametable 0
-    BEQ NT3
+    BNE NT3
     JSR colmap2
     JMP end
   NT3:
@@ -309,7 +309,8 @@ docheck:
     CMP #%11000000
     BNE elsefloor
     LDX #$01
-    STX iswalkable ;could be used in a bitmask in the overflowflag to be honest. too lazy, so time to abuse the zeropage. 
+    STX iswalkable ;could be used in a bitmask in the overflowflag to be honest. too lazy, so time to abuse the zeropage.
+    JMP end 
 
     elsefloor: 
       AND #%11000000
@@ -365,17 +366,25 @@ startloop:
 docheck:
     ;---------KEEP IN MIND THAT REG A HAS THE SHIFTED LEVEL ACCORDING TO THE CURRENT TILE OF PLAYER-------
     AND #%11000000 ;Check if it's a flower patch since flower = 11bin, If it's not, Z = 1
-    BEQ elsefloor
+    CMP #%11000000
+    BNE elsefloor
     LDX #$01
     STX iswalkable ;could be used in a bitmask in the overflowflag to be honest. too lazy, so time to abuse the zeropage. 
+    JMP end
 
     elsefloor: 
-      AND #%0100000
-      BEQ end
+      AND #%11000000
+      CMP #%01000000
+      BNE neither
       LDX #$01
       STX iswalkable
+      JMP end
+
+    neither:
+      LDX #$00  ;If neither, make sure to indicate it's not walkable 
+      STX iswalkable
       
-end:
+  end:
 
   PLA
   TAY
@@ -399,7 +408,7 @@ end:
   LDA supetileX  ;CHECK IF IT'S DOING MOD 4 correctly 
   AND #%00000011
   STA supetileX
-
+  
   LDA nametable2, Y ;Check the current level of player 
   LDX #$00
 startloop: 
@@ -414,17 +423,25 @@ startloop:
 docheck:
     ;---------KEEP IN MIND THAT REG A HAS THE SHIFTED LEVEL ACCORDING TO THE CURRENT TILE OF PLAYER-------
     AND #%11000000 ;Check if it's a flower patch since flower = 11bin, If it's not, Z = 1
-    BEQ elsefloor
+    CMP #%11000000
+    BNE elsefloor
     LDX #$01
     STX iswalkable ;could be used in a bitmask in the overflowflag to be honest. too lazy, so time to abuse the zeropage. 
+    JMP end
 
     elsefloor: 
-      AND #%0100000
-      BEQ end
+      AND #%11000000
+      CMP #%01000000
+      BNE neither
       LDX #$01
       STX iswalkable
+      JMP end
+
+    neither:
+      LDX #$00  ;If neither, make sure to indicate it's not walkable 
+      STX iswalkable
       
-end:
+  end:
 
   PLA
   TAY
@@ -463,17 +480,25 @@ startloop:
 docheck:
     ;---------KEEP IN MIND THAT REG A HAS THE SHIFTED LEVEL ACCORDING TO THE CURRENT TILE OF PLAYER-------
     AND #%11000000 ;Check if it's a flower patch since flower = 11bin, If it's not, Z = 1
-    BEQ elsefloor
+    CMP #%11000000
+    BNE elsefloor
     LDX #$01
     STX iswalkable ;could be used in a bitmask in the overflowflag to be honest. too lazy, so time to abuse the zeropage. 
+    JMP end
 
     elsefloor: 
-      AND #%0100000
-      BEQ end
+      AND #%11000000
+      CMP #%01000000
+      BNE neither
       LDX #$01
       STX iswalkable
+      JMP end
+
+    neither:
+      LDX #$00  ;If neither, make sure to indicate it's not walkable 
+      STX iswalkable
       
-end:
+  end:
 
   PLA
   TAY
@@ -601,7 +626,7 @@ end:
     STY collisionY
     LDA player_x
     CLC 
-    ADC #$11
+    ADC #$10
     STA collisionX
 
   ifelseleft: 
@@ -623,7 +648,7 @@ end:
     STX collisionX
     LDA player_y
     CLC 
-    ADC #$11
+    ADC #$10
     STA collisionY
 
   ifelseup:
@@ -1676,6 +1701,9 @@ ReadControllerLoop:
   BEQ ReadLeftDone   ; branch to ReadLeftDone if button is NOT pressed (0)
   STA player_dir
   JSR draw_player_left ;set render sprite to left
+  LDA iswalkable ;Check if it's a walkable tile
+  AND #$01
+  BEQ ReadLeftDone
   LDA scroll 
   CMP #$01 ;check if scroll hit wall
   BCC hit_left 
@@ -1694,6 +1722,9 @@ ReadControllerLoop:
   BEQ ReadRightDone   ; branch to ReadRightDone if button is NOT pressed (0)
   STA player_dir
   JSR draw_player_right ;set render sprite to right
+  LDA iswalkable ;Check if it's a walkable tile
+  AND #$01
+  BEQ ReadRightDone
   LDA scroll
   CMP #$ff ;check if scroll hit wall
   BCS hit_right
